@@ -15,6 +15,13 @@ class YuanbaoSidebar {
   }
 
   /**
+   * 生成唯一ID
+   */
+  generateUniqueId() {
+    return `ybq-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
    * 初始化侧边栏
    */
   async init() {
@@ -54,7 +61,7 @@ class YuanbaoSidebar {
       <div class="sidebar-header">
         <h3 class="sidebar-title">
           <span class="sidebar-icon">📝</span>
-          问题历史
+          问题历史12
         </h3>
         <button class="sidebar-toggle" title="收起/展开">
           <span class="toggle-icon">◀</span>
@@ -166,6 +173,38 @@ class YuanbaoSidebar {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "S") {
         e.preventDefault();
         this.toggleSidebar();
+      }
+    });
+
+    // 监听问题列表点击
+    const questionsList = this.sidebar.querySelector("#questions-list");
+    questionsList.addEventListener("click", (e) => {
+      const questionItem = e.target.closest(".question-item");
+      if (!questionItem) return;
+
+      const actionBtn = e.target.closest(".action-btn");
+      const questionId = parseInt(questionItem.dataset.id);
+      const question = this.questions.find((q) => q.id === questionId);
+
+      if (!question) return;
+
+      if (actionBtn) {
+        // 点击的是操作按钮
+        const action = actionBtn.dataset.action;
+        switch (action) {
+          case "copy":
+            this.copyQuestion(question.text);
+            break;
+          case "reuse":
+            this.reuseQuestion(question.text);
+            break;
+          case "delete":
+            this.deleteQuestion(questionId);
+            break;
+        }
+      } else {
+        // 点击的是问题本身
+        this.scrollToQuestion(question.domId);
       }
     });
   }
@@ -329,52 +368,78 @@ class YuanbaoSidebar {
     }
 
     // 也尝试从页面上最新的用户消息元素获取
-    setTimeout(() => this.extractQuestionsFromPage(), 1000);
+    setTimeout(() => this.extractQuestionsFromPage(true), 1000);
   }
 
   /**
    * 从页面提取所有用户问题
+   * @param {boolean} isManual - 是否为手动触发
    */
-  extractQuestionsFromPage() {
+  extractQuestionsFromPage(isManual = false) {
     const messageSelectors = [
       '[class*="hyc-content-text"]',
-      '[class*="user-message"]',
-      '[class*="human-message"]',
-      '[class*="user"]',
-      '[class*="human"]',
-      '[data-role="user"]',
-      '[data-from="user"]',
-      '[class*="question"]',
-      '[class*="query"]',
-      '[class*="prompt"]',
-      '[data-testid*="user-message"]',
+      // '[class*="user-message"]',
+      // '[class*="human-message"]',
+      // '[class*="user"]',
+      // '[class*="human"]',
+      // '[data-role="user"]',
+      // '[data-from="user"]',
+      // '[class*="question"]',
+      // '[class*="query"]',
+      // '[class*="prompt"]',
+      // '[data-testid*="user-message"]',
     ];
 
     const foundQuestions = new Set();
+    let newQuestionsCount = 0;
 
     messageSelectors.forEach((selector) => {
       const messages = document.querySelectorAll(selector);
       messages.forEach((msg) => {
-        const question = this.extractQuestionFromElement(msg);
-        if (question) {
-          foundQuestions.add(question);
+        const questionData = this.extractQuestionFromElement(msg);
+        if (
+          questionData &&
+          !this.questions.some((q) => q.text === questionData.text)
+        ) {
+          if (this.addQuestion(questionData.text, questionData.domId)) {
+            newQuestionsCount++;
+          }
+        } else if (
+          questionData &&
+          this.questions.some((q) => q.text === questionData.text && !q.domId)
+        ) {
+          // 如果问题已存在但没有domId，则更新它
+          const existingQuestion = this.questions.find(
+            (q) => q.text === questionData.text
+          );
+          if (existingQuestion) {
+            existingQuestion.domId = questionData.domId;
+            this.saveQuestions();
+          }
         }
       });
     });
 
-    // 添加新发现的问题
-    foundQuestions.forEach((question) => {
-      if (!this.questions.some((q) => q.text === question)) {
-        this.addQuestion(question);
+    if (isManual) {
+      if (newQuestionsCount > 0) {
+        this.showToast(`成功提取了 ${newQuestionsCount} 个新问题`);
+      } else {
+        this.showToast("未在当前页面上发现新的问题");
       }
-    });
+    }
   }
 
   /**
    * 从DOM元素提取问题文本
    */
   extractQuestionFromElement(element) {
-    if (!element) return null;
+    if (!element || element.closest(".yuanbao-sidebar")) return null; // 忽略侧边栏内的内容
+
+    // 如果元素没有ID，则分配一个
+    if (!element.id) {
+      element.id = this.generateUniqueId();
+    }
+    const domId = element.id;
 
     // 尝试多种方式提取文本
     const textSelectors = [
@@ -393,7 +458,7 @@ class YuanbaoSidebar {
       if (textEl) {
         const text = (textEl.textContent || textEl.innerText || "").trim();
         if (text && text.length > 0 && text.length < 500) {
-          return text;
+          return { text, domId };
         }
       }
     }
@@ -401,7 +466,7 @@ class YuanbaoSidebar {
     // 如果没有找到子元素，直接使用元素本身的文本
     const text = (element.textContent || element.innerText || "").trim();
     if (text && text.length > 0 && text.length < 500) {
-      return text;
+      return { text, domId };
     }
 
     return null;
@@ -409,20 +474,35 @@ class YuanbaoSidebar {
 
   /**
    * 添加新问题
+   * @param {string} questionText
+   * @param {string | null} domId
+   * @returns {boolean} - 是否成功添加了新问题
    */
-  async addQuestion(questionText) {
-    if (!questionText || questionText.trim().length === 0) return;
+  async addQuestion(questionText, domId = null) {
+    if (!questionText || questionText.trim().length === 0) return false;
+
+    const trimmedText = questionText.trim();
+
+    // 避免重复添加
+    if (this.questions.some((q) => q.text === trimmedText)) {
+      // 如果问题已存在，但domId没有，则更新
+      const existingQuestion = this.questions.find(
+        (q) => q.text === trimmedText
+      );
+      if (existingQuestion && !existingQuestion.domId && domId) {
+        existingQuestion.domId = domId;
+        await this.saveQuestions();
+        this.renderQuestions(); // 更新UI以包含domId
+      }
+      return false;
+    }
 
     const question = {
       id: Date.now(),
-      text: questionText.trim(),
+      text: trimmedText,
       timestamp: new Date().toLocaleString("zh-CN"),
+      domId: domId,
     };
-
-    // 避免重复添加
-    if (this.questions.some((q) => q.text === question.text)) {
-      return;
-    }
 
     this.questions.unshift(question); // 新问题添加到开头
 
@@ -438,6 +518,7 @@ class YuanbaoSidebar {
     this.renderQuestions();
 
     console.log("新问题已添加:", question.text);
+    return true;
   }
 
   /**
@@ -459,8 +540,10 @@ class YuanbaoSidebar {
     questionsList.innerHTML = this.questions
       .map(
         (question) => `
-      <div class="question-item" data-id="${question.id}">
-        <div class="question-text" title="${question.text}">
+      <div class="question-item" data-id="${question.id}" ${
+          question.domId ? `data-dom-id="${question.domId}"` : ""
+        } title="点击定位问题位置">
+        <div class="question-text">
           ${this.escapeHtml(question.text)}
         </div>
         <div class="question-meta">
@@ -482,40 +565,45 @@ class YuanbaoSidebar {
       )
       .join("");
 
-    // 绑定问题项事件
-    this.bindQuestionEvents();
+    // 绑定问题项事件 (事件委托已移至bindEvents)
+    // this.bindQuestionEvents();
   }
 
   /**
    * 绑定问题项的事件
    */
   bindQuestionEvents() {
-    const questionsList = this.sidebar.querySelector("#questions-list");
+    // 此方法的内容已移至 bindEvents 中，使用事件委托实现
+    // 保留此空方法以避免破坏现有调用结构，或在未来用于其他目的
+  }
 
-    questionsList.addEventListener("click", (e) => {
-      const actionBtn = e.target.closest(".action-btn");
-      if (!actionBtn) return;
+  /**
+   * 滚动到指定问题
+   * @param {string} domId
+   */
+  scrollToQuestion(domId) {
+    if (!domId) {
+      this.showToast("该问题在当前页面没有对应的位置");
+      return;
+    }
 
-      const questionItem = actionBtn.closest(".question-item");
-      const questionId = parseInt(questionItem.dataset.id);
-      const question = this.questions.find((q) => q.id === questionId);
+    const element = document.getElementById(domId);
 
-      if (!question) return;
+    if (element) {
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
 
-      const action = actionBtn.dataset.action;
-
-      switch (action) {
-        case "copy":
-          this.copyQuestion(question.text);
-          break;
-        case "reuse":
-          this.reuseQuestion(question.text);
-          break;
-        case "delete":
-          this.deleteQuestion(questionId);
-          break;
-      }
-    });
+      // 添加高亮效果
+      element.style.transition = "background-color 0.3s ease";
+      element.style.backgroundColor = "rgba(255, 255, 0, 0.5)";
+      setTimeout(() => {
+        element.style.backgroundColor = "";
+      }, 1500);
+    } else {
+      this.showToast("无法在当前页面找到该问题的位置");
+    }
   }
 
   /**
