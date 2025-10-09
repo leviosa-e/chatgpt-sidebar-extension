@@ -1,13 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "腾讯元宝侧边栏助手",
+  "name": "ChatGPT 侧边栏助手",
   "version": "1.0.0",
-  "description": "为腾讯元宝对话界面添加侧边栏，显示历史问题记录",
+  "description": "为 ChatGPT 对话界面添加侧边栏，显示历史问题记录",
   "permissions": ["storage", "activeTab"],
-  "host_permissions": ["https://yuanbao.tencent.com/*"],
+  "host_permissions": ["https://chatgpt.com/*"],
   "content_scripts": [
     {
-      "matches": ["https://yuanbao.tencent.com/*"],
+      "matches": ["https://chatgpt.com/*"],
       "js": ["content.js"],
       "css": ["sidebar.css"],
       "run_at": "document_end"
@@ -15,6 +15,6 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "腾讯元宝侧边栏助手"
+    "default_title": "ChatGPT 侧边栏助手"
   }
 }

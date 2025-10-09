@@ -328,6 +328,7 @@ class YuanbaoSidebar {
   checkForNewQuestions(node) {
     // 查找可能包含用户消息的元素
     const messageSelectors = [
+      '[class*="whitespace-pre-wrap"]',
       '[class*="user"]',
       '[class*="message"]',
       '[class*="question"]',
@@ -378,6 +379,7 @@ class YuanbaoSidebar {
   extractQuestionsFromPage(isManual = false) {
     const messageSelectors = [
       '[class*="hyc-content-text"]',
+      '[class*="whitespace-pre-wrap"]',
       // '[class*="user-message"]',
       // '[class*="human-message"]',
       // '[class*="user"]',
