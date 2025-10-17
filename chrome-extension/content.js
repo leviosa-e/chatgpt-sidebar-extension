@@ -33,7 +33,7 @@ class YuanbaoSidebar {
     }
 
     // 加载历史记录
-    await this.loadQuestions();
+    // await this.loadQuestions();
 
     // 开始监听对话变化
     this.startObserving();
@@ -397,29 +397,31 @@ class YuanbaoSidebar {
 
     messageSelectors.forEach((selector) => {
       const messages = document.querySelectorAll(selector);
-      messages.forEach((msg) => {
-        const questionData = this.extractQuestionFromElement(msg);
-        if (
-          questionData &&
-          !this.questions.some((q) => q.text === questionData.text)
-        ) {
-          if (this.addQuestion(questionData.text, questionData.domId)) {
-            newQuestionsCount++;
+      Array.from(messages)
+        .reverse()
+        .forEach((msg) => {
+          const questionData = this.extractQuestionFromElement(msg);
+          if (
+            questionData &&
+            !this.questions.some((q) => q.text === questionData.text)
+          ) {
+            if (this.addQuestion(questionData.text, questionData.domId)) {
+              newQuestionsCount++;
+            }
+          } else if (
+            questionData &&
+            this.questions.some((q) => q.text === questionData.text && !q.domId)
+          ) {
+            // 如果问题已存在但没有domId，则更新它
+            const existingQuestion = this.questions.find(
+              (q) => q.text === questionData.text
+            );
+            if (existingQuestion) {
+              existingQuestion.domId = questionData.domId;
+              this.saveQuestions();
+            }
           }
-        } else if (
-          questionData &&
-          this.questions.some((q) => q.text === questionData.text && !q.domId)
-        ) {
-          // 如果问题已存在但没有domId，则更新它
-          const existingQuestion = this.questions.find(
-            (q) => q.text === questionData.text
-          );
-          if (existingQuestion) {
-            existingQuestion.domId = questionData.domId;
-            this.saveQuestions();
-          }
-        }
-      });
+        });
     });
 
     if (isManual) {
