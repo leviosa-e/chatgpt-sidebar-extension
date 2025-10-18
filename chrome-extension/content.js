@@ -18,7 +18,9 @@ class YuanbaoSidebar {
    * 生成唯一ID
    */
   generateUniqueId() {
-    return `ybq-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const uniqueId = `ybq-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // console.log('🚀 ~ generateUniqueId uniqueId', uniqueId)
+    return uniqueId;
   }
 
   /**
@@ -26,10 +28,11 @@ class YuanbaoSidebar {
    */
   async init() {
     // 等待页面加载完成
+    // 在我自己的 mac air 上依然会有水合 dismatch 的问题，所以先延时 3s 作为临时解决方案
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", () => this.createSidebar());
+      document.addEventListener("DOMContentLoaded", () => setTimeout(() => this.createSidebar(), 3000));
     } else {
-      this.createSidebar();
+      setTimeout(() => this.createSidebar(), 3000);
     }
 
     // 加载历史记录
@@ -183,7 +186,7 @@ class YuanbaoSidebar {
       if (!questionItem) return;
 
       const actionBtn = e.target.closest(".action-btn");
-      const questionId = parseInt(questionItem.dataset.id);
+      const questionId = questionItem.dataset.domId;
       const question = this.questions.find((q) => q.id === questionId);
 
       if (!question) return;
@@ -401,10 +404,12 @@ class YuanbaoSidebar {
         .reverse()
         .forEach((msg) => {
           const questionData = this.extractQuestionFromElement(msg);
+
           if (
             questionData &&
             !this.questions.some((q) => q.text === questionData.text)
           ) {
+            // 如果提取到有效问题，并且未被记录过，则添加到问题列表里
             if (this.addQuestion(questionData.text, questionData.domId)) {
               newQuestionsCount++;
             }
@@ -502,7 +507,7 @@ class YuanbaoSidebar {
     }
 
     const question = {
-      id: Date.now(),
+      id: domId,
       text: trimmedText,
       timestamp: new Date().toLocaleString("zh-CN"),
       domId: domId,
@@ -521,7 +526,7 @@ class YuanbaoSidebar {
     // 重新渲染
     this.renderQuestions();
 
-    console.log("新问题已添加:", question.text);
+    // console.log("新问题已添加:", question.text);
     return true;
   }
 
@@ -551,7 +556,6 @@ class YuanbaoSidebar {
           ${this.escapeHtml(question.text)}
         </div>
         <div class="question-meta">
-          <span class="question-time">${question.timestamp}</span>
           <div class="question-actions">
             <button class="action-btn copy-btn" title="复制问题" data-action="copy">
               📋
@@ -593,6 +597,7 @@ class YuanbaoSidebar {
 
     const element = document.getElementById(domId);
 
+    // console.log('🚀 ~ scrollToQuestion domId', domId)
     if (element) {
       element.scrollIntoView({
         behavior: "smooth",
