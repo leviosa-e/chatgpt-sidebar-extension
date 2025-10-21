@@ -18,7 +18,9 @@ class YuanbaoSidebar {
    * 生成唯一ID
    */
   generateUniqueId() {
-    const uniqueId = `ybq-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const uniqueId = `ybq-${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
     // console.log('🚀 ~ generateUniqueId uniqueId', uniqueId)
     return uniqueId;
   }
@@ -30,10 +32,14 @@ class YuanbaoSidebar {
     // 等待页面加载完成
     // 在我自己的 mac air 上依然会有水合 dismatch 的问题，所以先延时 3s 作为临时解决方案
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", () => setTimeout(() => this.createSidebar(), 3000));
+      document.addEventListener("DOMContentLoaded", () =>
+        setTimeout(() => this.createSidebar(), 3000)
+      );
     } else {
       setTimeout(() => this.createSidebar(), 3000);
     }
+
+    this.createToggleButton();
 
     // 加载历史记录
     // await this.loadQuestions();
@@ -98,6 +104,29 @@ class YuanbaoSidebar {
     this.renderQuestions();
 
     console.log("腾讯元宝侧边栏已成功创建");
+  }
+
+  createToggleButton() {
+    const intervalId = setInterval(() => {
+      const conversationHeaderActions = document.getElementById(
+        "conversation-header-actions"
+      );
+      if (conversationHeaderActions) {
+        clearInterval(intervalId);
+        const button = document.createElement("button");
+        button.textContent = "目录";
+        button.className =
+          "btn relative btn-ghost text-token-text-primary mx-2";
+        // button.style = "view-transition-name:var(--vt_share_chat_wide_button)";
+        button.addEventListener("click", () => this.toggleSidebar());
+
+        conversationHeaderActions.prepend(button);
+      }
+    }, 3000);
+
+    setTimeout(() => {
+      clearInterval(intervalId);
+    }, 20000); // Stop after 20s
   }
 
   /**
