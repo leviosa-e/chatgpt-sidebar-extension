@@ -74,7 +74,7 @@ class ChatGPTSidebar {
       <div class="sidebar-header">
         <h3 class="sidebar-title">
           <span class="sidebar-icon">📝</span>
-          问题历史12
+          问题历史
         </h3>
         <button class="sidebar-toggle" title="收起/展开">
           <span class="toggle-icon">◀</span>
@@ -801,7 +801,7 @@ class ChatGPTSidebar {
    * 设置调整大小功能
    */
   setupResizing() {
-    const resizer = this.sidebar.querySelector('.sidebar-resizer');
+    const resizer = this.sidebar.querySelector(".sidebar-resizer");
     if (!resizer) {
       return;
     }
@@ -812,37 +812,37 @@ class ChatGPTSidebar {
       const newWidth = startWidth + deltaX;
 
       if (newWidth >= 250 && newWidth <= 800) {
-        this.sidebar.style.width = newWidth + 'px';
+        this.sidebar.style.width = newWidth + "px";
       }
     };
 
     const handleMouseUp = () => {
       if (!this.isResizing) return;
       this.isResizing = false;
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      
-      this.sidebar.classList.remove('resizing');
-      document.body.classList.remove('chatgpt-dock-resizing');
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+
+      this.sidebar.classList.remove("resizing");
+      document.body.classList.remove("chatgpt-dock-resizing");
 
       const finalWidth = parseInt(this.sidebar.style.width, 10);
       if (!isNaN(finalWidth)) {
-        chrome.storage.local.set({ 'chatgpt_sidebar_width': finalWidth });
+        chrome.storage.local.set({ chatgpt_sidebar_width: finalWidth });
       }
     };
 
     let startX, startWidth;
-    resizer.addEventListener('mousedown', (e) => {
+    resizer.addEventListener("mousedown", (e) => {
       e.preventDefault();
       this.isResizing = true;
       startX = e.clientX;
       startWidth = parseInt(window.getComputedStyle(this.sidebar).width, 10);
-      
-      this.sidebar.classList.add('resizing');
-      document.body.classList.add('chatgpt-dock-resizing');
 
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      this.sidebar.classList.add("resizing");
+      document.body.classList.add("chatgpt-dock-resizing");
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
     });
   }
 }
