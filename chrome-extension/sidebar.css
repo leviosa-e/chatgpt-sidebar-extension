@@ -47,7 +47,7 @@
   flex-direction: column;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  transition: width 0.2s ease-in-out;
+  transition: width 0.3s ease-in-out, transform 0.3s ease-in-out;
   color: var(--sidebar-text-color);
 }
 
@@ -71,7 +71,6 @@
   min-width: 0;
   border-left: none;
   transform: translateX(100%);
-  transition: transform 0.3s ease-in-out, width 0.3s ease-in-out 0.3s;
   overflow: hidden;
 }
 
