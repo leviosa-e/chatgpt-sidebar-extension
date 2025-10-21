@@ -6,6 +6,7 @@ class ChatGPTSidebar {
   constructor() {
     // DOM 元素引用
     this.sidebar = null;
+    this.resizer = null;
 
     this.isResizing = false;
     this.isCollapsed = false;
@@ -44,7 +45,7 @@ class ChatGPTSidebar {
     this.createToggleButton();
 
     // 加载历史记录
-    // await this.loadQuestions();
+    await this.loadQuestions();
 
     // 开始监听对话变化
     this.startObserving();
@@ -102,6 +103,9 @@ class ChatGPTSidebar {
 
     // 绑定事件
     this.bindEvents();
+
+    // 设置调整大小功能
+    this.setupResizing();
 
     // 渲染历史问题
     this.renderQuestions();
@@ -758,14 +762,21 @@ class ChatGPTSidebar {
       const result = await chrome.storage.local.get([
         this.storageKey,
         "sidebar_collapsed",
+        "chatgpt_sidebar_width",
       ]);
       this.questions = result[this.storageKey] || [];
       this.isCollapsed = result.sidebar_collapsed || false;
+      const savedWidth = result.chatgpt_sidebar_width;
 
-      if (this.sidebar && this.isCollapsed) {
-        this.sidebar.classList.add("collapsed");
-        const toggleIcon = this.sidebar.querySelector(".toggle-icon");
-        if (toggleIcon) toggleIcon.textContent = "▶";
+      if (this.sidebar) {
+        if (this.isCollapsed) {
+          this.sidebar.classList.add("collapsed");
+          const toggleIcon = this.sidebar.querySelector(".toggle-icon");
+          if (toggleIcon) toggleIcon.textContent = "▶";
+        }
+        if (savedWidth) {
+          this.sidebar.style.width = `${savedWidth}px`;
+        }
       }
     } catch (err) {
       console.warn("加载历史记录失败:", err);
@@ -790,57 +801,49 @@ class ChatGPTSidebar {
    * 设置调整大小功能
    */
   setupResizing() {
-    let startX, startWidth, startBodyMargin;
+    const resizer = this.sidebar.querySelector('.sidebar-resizer');
+    if (!resizer) {
+      return;
+    }
 
-    resizer.addEventListener("mousedown", function (e) {
-      this.isResizing = true;
-      startX = e.clientX;
-      startWidth = parseInt(getComputedStyle(this.sidebar).width, 10);
-      startBodyMargin =
-        parseInt(getComputedStyle(document.body).marginRight, 10) || 0;
-
-      // 添加resizing类，禁用过渡效果
-      this.sidebar.classList.add("resizing");
-      document.body.classList.add("chatgpt-dock-resizing");
-
-      document.addEventListener("mousemove", handleResize.bind(this));
-      document.addEventListener("mouseup", stopResize.bind(this));
-
-      e.preventDefault();
-    });
-
-    function handleResize(e) {
+    const handleMouseMove = (e) => {
       if (!this.isResizing) return;
-
-      // 计算新宽度（向左拖拽增加宽度）
       const deltaX = startX - e.clientX;
       const newWidth = startWidth + deltaX;
 
-      // 限制宽度范围
-      if (newWidth >= 250 && newWidth <= 600) {
-        this.sidebar.style.width = newWidth + "px";
-
-        // 同时调整body的margin
-        if (settings.isVisible) {
-          document.body.style.marginRight = newWidth + "px";
-        }
-
-        // 保存设置
-        settings.dockWidth = newWidth;
-        saveSettings("dockWidth", newWidth);
+      if (newWidth >= 250 && newWidth <= 800) {
+        this.sidebar.style.width = newWidth + 'px';
       }
-    }
+    };
 
-    function stopResize() {
-      isResizing = false;
+    const handleMouseUp = () => {
+      if (!this.isResizing) return;
+      this.isResizing = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      
+      this.sidebar.classList.remove('resizing');
+      document.body.classList.remove('chatgpt-dock-resizing');
 
-      // 移除resizing类，恢复过渡效果
-      dockWindow.classList.remove("resizing");
-      document.body.classList.remove("yuanbao-dock-resizing");
+      const finalWidth = parseInt(this.sidebar.style.width, 10);
+      if (!isNaN(finalWidth)) {
+        chrome.storage.local.set({ 'chatgpt_sidebar_width': finalWidth });
+      }
+    };
 
-      document.removeEventListener("mousemove", handleResize);
-      document.removeEventListener("mouseup", stopResize);
-    }
+    let startX, startWidth;
+    resizer.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      this.isResizing = true;
+      startX = e.clientX;
+      startWidth = parseInt(window.getComputedStyle(this.sidebar).width, 10);
+      
+      this.sidebar.classList.add('resizing');
+      document.body.classList.add('chatgpt-dock-resizing');
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    });
   }
 }
 
