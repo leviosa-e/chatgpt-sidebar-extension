@@ -296,7 +296,7 @@
 
 /* 目录按钮 */
 .directory-toggle-btn {
-  background-color: transparent;
+  /* background-color: transparent;
   border: 1px solid #d9d9e3;
   color: #202123;
   padding: 8px 12px;
@@ -308,12 +308,12 @@
   margin: 4px 2px;
   cursor: pointer;
   border-radius: 8px;
-  transition: background-color 0.2s, border-color 0.2s;
+  transition: background-color 0.2s, border-color 0.2s; */
 }
 
 .directory-toggle-btn:hover {
-  background-color: #f0f0f0;
-  border-color: #c0c0c0;
+  /* background-color: #f0f0f0;
+  border-color: #c0c0c0; */
 }
 
 /* 响应式设计 */

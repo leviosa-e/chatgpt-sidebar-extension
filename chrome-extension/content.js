@@ -42,14 +42,14 @@ class ChatGPTSidebar {
       setTimeout(() => this.createSidebar(), 3000);
     }
 
-    this.createToggleButton();
-
     // 加载侧边栏设置
     await this.loadSidebarSettings();
     // await this.loadQuestions();
 
     // 开始监听对话变化
     this.startObserving();
+    // 监听DOM变化以确保UI元素持续存在
+    this.initDOMObserver();
   }
 
   /**
@@ -114,27 +114,44 @@ class ChatGPTSidebar {
     console.log("腾讯元宝侧边栏已成功创建");
   }
 
-  createToggleButton() {
-    const intervalId = setInterval(() => {
-      const conversationHeaderActions = document.getElementById(
-        "conversation-header-actions"
-      );
-      if (conversationHeaderActions) {
-        clearInterval(intervalId);
-        const button = document.createElement("button");
-        button.textContent = "目录";
-        button.className =
-          "btn relative btn-ghost text-token-text-primary mx-2";
-        // button.style = "view-transition-name:var(--vt_share_chat_wide_button)";
-        button.addEventListener("click", () => this.toggleSidebar());
+  initDOMObserver() {
+    const observer = new MutationObserver(this.debounce(() => {
+      this.ensureElements();
+    }, 500));
 
-        conversationHeaderActions.prepend(button);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  ensureElements() {
+    // 确保侧边栏存在
+    if (this.sidebar && !document.body.contains(this.sidebar)) {
+      const mainContainer = this.findMainContainer();
+      if (mainContainer) {
+        this.insertSidebar(mainContainer);
       }
-    }, 3000);
+    }
 
-    setTimeout(() => {
-      clearInterval(intervalId);
-    }, 20000); // Stop after 20s
+    // 确保目录按钮存在
+    const header = document.getElementById("conversation-header-actions");
+    if (header && !header.querySelector('.directory-toggle-btn')) {
+      const button = document.createElement("button");
+      button.textContent = "目录";
+      button.className = "directory-toggle-btn btn relative btn-ghost text-token-text-primary mx-2";
+      button.addEventListener("click", () => this.toggleSidebar());
+      header.prepend(button);
+    }
+  }
+
+  debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+      const context = this;
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(context, args), wait);
+    };
   }
 
   /**
