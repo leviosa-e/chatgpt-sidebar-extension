@@ -44,8 +44,9 @@ class ChatGPTSidebar {
 
     this.createToggleButton();
 
-    // 加载历史记录
-    await this.loadQuestions();
+    // 加载侧边栏设置
+    await this.loadSidebarSettings();
+    // await this.loadQuestions();
 
     // 开始监听对话变化
     this.startObserving();
@@ -755,16 +756,14 @@ class ChatGPTSidebar {
   }
 
   /**
-   * 加载历史问题
+   * 加载侧边栏设置（宽度和折叠状态）
    */
-  async loadQuestions() {
+  async loadSidebarSettings() {
     try {
       const result = await chrome.storage.local.get([
-        this.storageKey,
         "sidebar_collapsed",
         "chatgpt_sidebar_width",
       ]);
-      this.questions = result[this.storageKey] || [];
       this.isCollapsed = result.sidebar_collapsed || false;
       const savedWidth = result.chatgpt_sidebar_width;
 
@@ -778,6 +777,19 @@ class ChatGPTSidebar {
           this.sidebar.style.width = `${savedWidth}px`;
         }
       }
+    } catch (err) {
+      console.warn("加载侧边栏设置失败:", err);
+    }
+  }
+
+  /**
+   * 加载历史问题
+   */
+  async loadQuestions() {
+    try {
+      const result = await chrome.storage.local.get([this.storageKey]);
+      this.questions = result[this.storageKey] || [];
+      this.renderQuestions();
     } catch (err) {
       console.warn("加载历史记录失败:", err);
       this.questions = [];
