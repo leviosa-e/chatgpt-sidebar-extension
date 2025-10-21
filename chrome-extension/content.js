@@ -1,15 +1,17 @@
 /**
- * 腾讯元宝侧边栏助手 - Content Script
- * 用于在腾讯元宝对话界面中添加侧边栏功能
+ * ChatGPT 侧边栏助手 - Content Script
+ * 用于在 ChatGPT 对话界面中添加侧边栏功能
  */
-
-class YuanbaoSidebar {
+class ChatGPTSidebar {
   constructor() {
+    // DOM 元素引用
     this.sidebar = null;
+
+    this.isResizing = false;
     this.isCollapsed = false;
     this.questions = [];
     this.observer = null;
-    this.storageKey = "yuanbao_questions_history";
+    this.storageKey = "chatgpt_questions_history";
 
     this.init();
   }
@@ -67,6 +69,7 @@ class YuanbaoSidebar {
 
     // 创建侧边栏内容
     this.sidebar.innerHTML = `
+      <div class="sidebar-resizer"></div>
       <div class="sidebar-header">
         <h3 class="sidebar-title">
           <span class="sidebar-icon">📝</span>
@@ -782,9 +785,66 @@ class YuanbaoSidebar {
       console.warn("保存历史记录失败:", err);
     }
   }
+
+  /**
+   * 设置调整大小功能
+   */
+  setupResizing() {
+    let startX, startWidth, startBodyMargin;
+
+    resizer.addEventListener("mousedown", function (e) {
+      this.isResizing = true;
+      startX = e.clientX;
+      startWidth = parseInt(getComputedStyle(this.sidebar).width, 10);
+      startBodyMargin =
+        parseInt(getComputedStyle(document.body).marginRight, 10) || 0;
+
+      // 添加resizing类，禁用过渡效果
+      this.sidebar.classList.add("resizing");
+      document.body.classList.add("chatgpt-dock-resizing");
+
+      document.addEventListener("mousemove", handleResize.bind(this));
+      document.addEventListener("mouseup", stopResize.bind(this));
+
+      e.preventDefault();
+    });
+
+    function handleResize(e) {
+      if (!this.isResizing) return;
+
+      // 计算新宽度（向左拖拽增加宽度）
+      const deltaX = startX - e.clientX;
+      const newWidth = startWidth + deltaX;
+
+      // 限制宽度范围
+      if (newWidth >= 250 && newWidth <= 600) {
+        this.sidebar.style.width = newWidth + "px";
+
+        // 同时调整body的margin
+        if (settings.isVisible) {
+          document.body.style.marginRight = newWidth + "px";
+        }
+
+        // 保存设置
+        settings.dockWidth = newWidth;
+        saveSettings("dockWidth", newWidth);
+      }
+    }
+
+    function stopResize() {
+      isResizing = false;
+
+      // 移除resizing类，恢复过渡效果
+      dockWindow.classList.remove("resizing");
+      document.body.classList.remove("yuanbao-dock-resizing");
+
+      document.removeEventListener("mousemove", handleResize);
+      document.removeEventListener("mouseup", stopResize);
+    }
+  }
 }
 
 // 初始化侧边栏
 if (typeof window !== "undefined") {
-  new YuanbaoSidebar();
+  new ChatGPTSidebar();
 }

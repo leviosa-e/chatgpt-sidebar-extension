@@ -5,9 +5,10 @@
 
 /* 侧边栏主容器 */
 .yuanbao-sidebar {
-  position: fixed;
-  top: 0;
-  right: 0;
+  /* position: fixed; */
+  /* top: 0; */
+  /* right: 0; */
+  position: relative;
   width: 320px;
   height: 100vh;
   background: #ffffff;
@@ -19,6 +20,26 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
+}
+
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background-color: transparent;
+  cursor: ew-resize;
+  z-index: 10;
+}
+
+.yuanbao-dock-resizer::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 0px;
+  width: 8px;
+  height: 100%;
 }
 
 /* 收起状态 */
