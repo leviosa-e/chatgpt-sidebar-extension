@@ -72,12 +72,12 @@ class ChatGPTSidebar {
     // 创建侧边栏内容
     this.sidebar.innerHTML = `
       <div class="sidebar-resizer"></div>
-      <div class="sidebar-header">
-        <h3 class="sidebar-title">
+      <div class="sidebar-header h-header-height">
+        <h3 class="sidebar-title text-token-text-primary">
           <span class="sidebar-icon">📝</span>
           问题历史
         </h3>
-        <button class="sidebar-toggle" title="收起/展开">
+        <button class="sidebar-toggle text-token-text-primary no-draggable hover:bg-token-surface-hover keyboard-focused:bg-token-surface-hover touch:h-10 touch:w-10 flex h-9 w-9 items-center justify-center rounded-lg focus:outline-none disabled:opacity-50" title="收起/展开">
           <span class="toggle-icon">◀</span>
         </button>
       </div>
