@@ -111,6 +111,8 @@ class ChatGPTSidebar {
     // 渲染历史问题
     this.renderQuestions();
 
+    this.waitForContentAndExtract();
+
     console.log("腾讯元宝侧边栏已成功创建");
   }
 
@@ -153,6 +155,31 @@ class ChatGPTSidebar {
   handleConversationSwitch() {
     this.questions = [];
     this.renderQuestions();
+    this.waitForContentAndExtract();
+  }
+
+  waitForContentAndExtract() {
+    const maxRetries = 10;
+    let retryCount = 0;
+
+    const intervalId = setInterval(() => {
+      // Use a selector that indicates the chat is loaded.
+      const chatLoadedIndicator = document.querySelector(
+        '[class*="hyc-content-text"], [class*="whitespace-pre-wrap"]'
+      );
+
+      if (chatLoadedIndicator) {
+        clearInterval(intervalId);
+        console.log("对话内容已加载，自动提取问题...");
+        this.extractQuestionsFromPage(false); // false for silent extraction
+      } else {
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          clearInterval(intervalId);
+          console.log("等待对话内容超时，未自动提取问题。");
+        }
+      }
+    }, 1000); // Check every second
   }
 
   debounce(func, wait) {
