@@ -6,13 +6,13 @@ class ChatGPTSidebar {
   constructor() {
     // DOM 元素引用
     this.sidebar = null;
-    this.resizer = null;
 
     this.isResizing = false;
     this.isCollapsed = false;
     this.questions = [];
     this.observer = null;
     this.storageKey = "chatgpt_questions_history";
+    this.currentURL = window.location.href;
 
     this.init();
   }
@@ -126,6 +126,11 @@ class ChatGPTSidebar {
   }
 
   ensureElements() {
+    if (window.location.href !== this.currentURL) {
+      this.currentURL = window.location.href;
+      this.handleConversationSwitch();
+    }
+
     // 确保侧边栏存在
     if (this.sidebar && !document.body.contains(this.sidebar)) {
       const mainContainer = this.findMainContainer();
@@ -143,6 +148,11 @@ class ChatGPTSidebar {
       button.addEventListener("click", () => this.toggleSidebar());
       header.prepend(button);
     }
+  }
+
+  handleConversationSwitch() {
+    this.questions = [];
+    this.renderQuestions();
   }
 
   debounce(func, wait) {
