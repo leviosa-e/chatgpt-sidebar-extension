@@ -75,7 +75,7 @@ class ChatGPTSidebar {
       <div class="sidebar-header h-header-height">
         <h3 class="sidebar-title text-token-text-primary">
           <span class="sidebar-icon">📝</span>
-          问题历史
+          对话目录
         </h3>
         <button class="sidebar-toggle text-token-text-primary no-draggable hover:bg-token-surface-hover keyboard-focused:bg-token-surface-hover touch:h-10 touch:w-10 flex h-9 w-9 items-center justify-center rounded-lg focus:outline-none disabled:opacity-50" title="收起/展开">
           <span class="toggle-icon">◀</span>
@@ -84,20 +84,20 @@ class ChatGPTSidebar {
       <div class="sidebar-content">
         <div class="questions-list" id="questions-list">
           <div class="empty-state">
-            <p>暂无历史问题</p>
-            <small>开始对话后，您的问题将显示在这里</small>
+            <p>暂无对话内容</p>
+            <small>开始对话后，您发送的消息将显示在这里</small>
           </div>
         </div>
-        <div class="sidebar-footer">
-          <button class="extract-questions-btn" title="提取已有问题">
-            <span>🔄</span> 提取问题
-          </button>
-          <button class="clear-history-btn" title="清空历史记录">
-            <span>🗑️</span> 清空记录
-          </button>
-        </div>
       </div>
-    `;
+        `;
+    // <div class="sidebar-footer">
+    //   <button class="extract-questions-btn" title="提取已有问题">
+    //     <span>🔄</span> 提取问题
+    //   </button>
+    //   <button class="clear-history-btn" title="清空历史记录">
+    //     <span>🗑️</span> 清空记录
+    //   </button>
+    // </div>
 
     // 插入侧边栏
     this.insertSidebar(mainContainer);
@@ -117,9 +117,11 @@ class ChatGPTSidebar {
   }
 
   initDOMObserver() {
-    const observer = new MutationObserver(this.debounce(() => {
-      this.ensureElements();
-    }, 500));
+    const observer = new MutationObserver(
+      this.debounce(() => {
+        this.ensureElements();
+      }, 500)
+    );
 
     observer.observe(document.body, {
       childList: true,
@@ -143,10 +145,11 @@ class ChatGPTSidebar {
 
     // 确保目录按钮存在
     const header = document.getElementById("conversation-header-actions");
-    if (header && !header.querySelector('.directory-toggle-btn')) {
+    if (header && !header.querySelector(".directory-toggle-btn")) {
       const button = document.createElement("button");
       button.textContent = "目录";
-      button.className = "directory-toggle-btn btn relative btn-ghost text-token-text-primary mx-2";
+      button.className =
+        "directory-toggle-btn btn relative btn-ghost text-token-text-primary mx-2";
       button.addEventListener("click", () => this.toggleSidebar());
       header.prepend(button);
     }
@@ -184,7 +187,7 @@ class ChatGPTSidebar {
 
   debounce(func, wait) {
     let timeout;
-    return function(...args) {
+    return function (...args) {
       const context = this;
       clearTimeout(timeout);
       timeout = setTimeout(() => func.apply(context, args), wait);
@@ -630,8 +633,8 @@ class ChatGPTSidebar {
     if (this.questions.length === 0) {
       questionsList.innerHTML = `
         <div class="empty-state">
-          <p>暂无历史问题</p>
-          <small>开始对话后，您的问题将显示在这里</small>
+          <p>暂无对话内容</p>
+          <small>开始对话后，您发送的消息将显示在这里</small>
         </div>
       `;
       return;
@@ -642,13 +645,13 @@ class ChatGPTSidebar {
         (question) => `
       <div class="question-item" data-id="${question.id}" ${
           question.domId ? `data-dom-id="${question.domId}"` : ""
-        } title="点击定位问题位置">
+        } title="点击定位对话位置">
         <div class="question-text">
           ${this.escapeHtml(question.text)}
         </div>
         <div class="question-meta">
           <div class="question-actions">
-            <button class="action-btn copy-btn" title="复制问题" data-action="copy">
+            <button class="action-btn copy-btn" title="复制对话" data-action="copy">
               📋
             </button>
             <button class="action-btn reuse-btn" title="重新提问" data-action="reuse">
