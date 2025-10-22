@@ -604,11 +604,11 @@ class ChatGPTSidebar {
       domId: domId,
     };
 
-    this.questions.unshift(question); // 新问题添加到开头
+    this.questions.push(question);
 
     // 限制历史记录数量
     if (this.questions.length > 50) {
-      this.questions = this.questions.slice(0, 50);
+      this.questions = this.questions.slice(-50); // 保留最新的50条
     }
 
     // 保存到存储
