@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "ChatGPT 侧边栏助手",
+  "name": "__MSG_pluginName__",
   "version": "1.0.0",
-  "description": "为 ChatGPT 对话界面添加侧边栏，显示历史问题记录",
+  "description": "__MSG_pluginDescription__",
+  "default_locale": "zh_CN",
   "permissions": ["storage", "activeTab"],
   "host_permissions": ["https://chatgpt.com/*"],
   "content_scripts": [
@@ -15,6 +16,6 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "ChatGPT 侧边栏助手"
+    "default_title": "__MSG_pluginName__"
   }
 }

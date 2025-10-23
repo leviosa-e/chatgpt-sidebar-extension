@@ -1,0 +1,50 @@
+{
+  "pluginName": {
+    "message": "ChatGPT 侧边栏助手",
+    "description": "插件的名称。"
+  },
+  "pluginDescription": {
+    "message": "一个用于管理您在 ChatGPT 上的对话历史的侧边栏助手。",
+    "description": "插件的描述。"
+  },
+  "sidebarTitle": {
+    "message": "对话目录",
+    "description": "侧边栏的标题。"
+  },
+  "filterStarred": {
+    "message": "只显示星标",
+    "description": "星标筛选复选框的标签。"
+  },
+  "emptyStateHeader": {
+    "message": "暂无对话内容",
+    "description": "对话列表为空时的标题文本。"
+  },
+  "emptyStateDescription": {
+    "message": "开始对话后，您发送的消息将显示在这里。",
+    "description": "对话列表为空时的描述文本。"
+  },
+  "emptyStateStarredHeader": {
+    "message": "没有加星标的对话",
+    "description": "在星标模式下，对话列表为空时的标题文本。"
+  },
+  "emptyStateStarredDescription": {
+    "message": "点击对话旁的星星即可收藏。",
+    "description": "在星标模式下，对话列表为空时的描述文本。"
+  },
+  "toggleButton": {
+    "message": "目录",
+    "description": "用于切换侧边栏显示/隐藏的按钮文本。"
+  },
+  "addStarTitle": {
+    "message": "添加星标",
+    "description": "为对话添加星标按钮的工具提示。"
+  },
+  "removeStarTitle": {
+    "message": "取消星标",
+    "description": "取消对话星标按钮的工具提示。"
+  },
+  "scrollToConversationTitle": {
+    "message": "点击定位对话位置",
+    "description": "对话项的工具提示。"
+  }
+}

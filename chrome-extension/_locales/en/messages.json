@@ -1,0 +1,50 @@
+{
+  "pluginName": {
+    "message": "ChatGPT Sidebar Assistant",
+    "description": "The name of the extension."
+  },
+  "pluginDescription": {
+    "message": "A sidebar assistant to manage your conversation history on ChatGPT.",
+    "description": "The description of the extension."
+  },
+  "sidebarTitle": {
+    "message": "Conversation Directory",
+    "description": "Title for the sidebar."
+  },
+  "filterStarred": {
+    "message": "Show only starred",
+    "description": "Label for the star filter checkbox."
+  },
+  "emptyStateHeader": {
+    "message": "No conversations yet",
+    "description": "Header text when the conversation list is empty."
+  },
+  "emptyStateDescription": {
+    "message": "Messages you send will appear here.",
+    "description": "Description text when the conversation list is empty."
+  },
+  "emptyStateStarredHeader": {
+    "message": "No starred conversations",
+    "description": "Header text when the conversation list is empty in starred mode."
+  },
+  "emptyStateStarredDescription": {
+    "message": "Click the star next to a conversation to favorite it.",
+    "description": "Description text when the conversation list is empty in starred mode."
+  },
+  "toggleButton": {
+    "message": "Directory",
+    "description": "Text for the button that toggles the sidebar."
+  },
+  "addStarTitle": {
+    "message": "Add star",
+    "description": "Tooltip for the button to star a conversation."
+  },
+  "removeStarTitle": {
+    "message": "Remove star",
+    "description": "Tooltip for the button to unstar a conversation."
+  },
+  "scrollToConversationTitle": {
+    "message": "Scroll to conversation",
+    "description": "Tooltip for a conversation item."
+  }
+}

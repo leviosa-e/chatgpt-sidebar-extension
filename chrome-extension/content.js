@@ -75,12 +75,12 @@ class ChatGPTSidebar {
       <div class="sidebar-header h-header-height">
         <h3 class="sidebar-title text-token-text-primary">
           <span class="sidebar-icon">📝</span>
-          对话目录
+          ${chrome.i18n.getMessage("sidebarTitle")}
         </h3>
         <div class="sidebar-controls">
           <label class="star-filter-label">
             <input type="checkbox" class="star-filter-checkbox" />
-            只显示星标
+            ${chrome.i18n.getMessage("filterStarred")}
           </label>
           <button class="sidebar-toggle text-token-text-primary no-draggable hover:bg-token-surface-hover keyboard-focused:bg-token-surface-hover touch:h-10 touch:w-10 flex h-9 w-9 items-center justify-center rounded-lg focus:outline-none disabled:opacity-50" title="收起/展开">
             <span class="toggle-icon">◀</span>
@@ -151,11 +151,10 @@ class ChatGPTSidebar {
 
     // 确保目录按钮存在
     const header = document.getElementById("conversation-header-actions");
-    if (header && !header.querySelector(".directory-toggle-btn")) {
+    if (header && !header.querySelector('.directory-toggle-btn')) {
       const button = document.createElement("button");
-      button.textContent = "目录";
-      button.className =
-        "directory-toggle-btn btn relative btn-ghost text-token-text-primary mx-2";
+      button.textContent = chrome.i18n.getMessage("toggleButton");
+      button.className = "directory-toggle-btn btn relative btn-ghost text-token-text-primary mx-2";
       button.addEventListener("click", () => this.toggleSidebar());
       header.prepend(button);
     }
@@ -340,7 +339,7 @@ class ChatGPTSidebar {
         const starBtn = questionItem.querySelector(".star-btn");
         if (starBtn) {
           starBtn.classList.toggle("starred", question.isStarred);
-          starBtn.title = question.isStarred ? "取消星标" : "添加星标";
+          starBtn.title = question.isStarred ? chrome.i18n.getMessage("removeStarTitle") : chrome.i18n.getMessage("addStarTitle");
           starBtn.innerHTML = question.isStarred ? "★" : "☆";
         }
       }
@@ -678,12 +677,8 @@ class ChatGPTSidebar {
     if (questionsToRender.length === 0) {
       questionsList.innerHTML = `
         <div class="empty-state">
-          <p>${showOnlyStarred ? "没有加星标的对话" : "暂无对话内容"}</p>
-          <small>${
-            showOnlyStarred
-              ? "点击对话旁的星星收藏"
-              : "开始对话后，您发送的消息将显示在这里"
-          }</small>
+          <p>${showOnlyStarred ? chrome.i18n.getMessage("emptyStateStarredHeader") : chrome.i18n.getMessage("emptyStateHeader")}</p>
+          <small>${showOnlyStarred ? chrome.i18n.getMessage("emptyStateStarredDescription") : chrome.i18n.getMessage("emptyStateDescription")}</small>
         </div>
       `;
       return;
@@ -694,20 +689,20 @@ class ChatGPTSidebar {
         (question) => `
       <div class="question-item" data-id="${question.id}" ${
           question.domId ? `data-dom-id="${question.domId}"` : ""
-        } title="点击定位对话位置">
+        } title="${chrome.i18n.getMessage("scrollToConversationTitle")}">
         <div class="question-content-wrapper">
           <div class="question-text">
             ${this.escapeHtml(question.text)}
           </div>
-          <button class="action-btn star-btn ${
-            question.isStarred ? "starred" : ""
-          }" title="${
-          question.isStarred ? "取消星标" : "添加星标"
-        }" data-action="star">
-            ${question.isStarred ? "★" : "☆"}
-          </button>
+           <button class="action-btn star-btn ${
+             question.isStarred ? "starred" : ""
+           }" title="${
+           question.isStarred ? chrome.i18n.getMessage("removeStarTitle") : chrome.i18n.getMessage("addStarTitle")
+         }" data-action="star">
+             ${question.isStarred ? "★" : "☆"}
+           </button>
+         </div>
         </div>
-      </div>
     `
       )
       .join("");
