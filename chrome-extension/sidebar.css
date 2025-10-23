@@ -189,6 +189,10 @@
   opacity: 1;
 }
 
+.question-content-wrapper {
+  display: flex;
+}
+
 .question-text {
   font-size: 14px;
   line-height: 1.5;
@@ -228,6 +232,10 @@
   border-radius: 5px;
   font-size: 16px;
   color: var(--sidebar-icon-color);
+}
+
+.star-btn {
+  color: #787878;
 }
 
 .action-btn:hover {

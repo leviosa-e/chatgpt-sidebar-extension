@@ -260,10 +260,14 @@ class ChatGPTSidebar {
     toggleBtn.addEventListener("click", () => this.toggleSidebar());
 
     // “只显示星标”筛选
-    const starFilterCheckbox = this.sidebar.querySelector(".star-filter-checkbox");
+    const starFilterCheckbox = this.sidebar.querySelector(
+      ".star-filter-checkbox"
+    );
     starFilterCheckbox.addEventListener("change", () => {
       this.renderQuestions();
-      chrome.storage.local.set({ chatgpt_show_only_starred: starFilterCheckbox.checked });
+      chrome.storage.local.set({
+        chatgpt_show_only_starred: starFilterCheckbox.checked,
+      });
     });
 
     // 监听问题列表点击（事件委托）
@@ -664,17 +668,22 @@ class ChatGPTSidebar {
    */
   renderQuestions() {
     const questionsList = this.sidebar.querySelector("#questions-list");
-    const showOnlyStarred = this.sidebar.querySelector('.star-filter-checkbox')?.checked || false;
+    const showOnlyStarred =
+      this.sidebar.querySelector(".star-filter-checkbox")?.checked || false;
 
     const questionsToRender = showOnlyStarred
-      ? this.questions.filter(q => q.isStarred)
+      ? this.questions.filter((q) => q.isStarred)
       : this.questions;
 
     if (questionsToRender.length === 0) {
       questionsList.innerHTML = `
         <div class="empty-state">
-          <p>${showOnlyStarred ? '没有加星标的对话' : '暂无对话内容'}</p>
-          <small>${showOnlyStarred ? '点击对话旁的星星收藏' : '开始对话后，您发送的消息将显示在这里'}</small>
+          <p>${showOnlyStarred ? "没有加星标的对话" : "暂无对话内容"}</p>
+          <small>${
+            showOnlyStarred
+              ? "点击对话旁的星星收藏"
+              : "开始对话后，您发送的消息将显示在这里"
+          }</small>
         </div>
       `;
       return;
@@ -690,28 +699,31 @@ class ChatGPTSidebar {
           <div class="question-text">
             ${this.escapeHtml(question.text)}
           </div>
-          <div class="question-meta">
-            <div class="question-actions">
-              <button class="action-btn copy-btn" title="复制对话" data-action="copy">
-                📋
-              </button>
-              <button class="action-btn reuse-btn" title="重新提问" data-action="reuse">
-                🔄
-              </button>
-              <button class="action-btn delete-btn" title="删除" data-action="delete">
-                ❌
-              </button>
-            </div>
-          </div>
+          <button class="action-btn star-btn ${
+            question.isStarred ? "starred" : ""
+          }" title="${
+          question.isStarred ? "取消星标" : "添加星标"
+        }" data-action="star">
+            ${question.isStarred ? "★" : "☆"}
+          </button>
         </div>
-        <button class="action-btn star-btn ${question.isStarred ? 'starred' : ''}" title="${question.isStarred ? '取消星标' : '添加星标'}" data-action="star">
-          ${question.isStarred ? '★' : '☆'}
-        </button>
       </div>
     `
       )
       .join("");
-
+    // <div class="question-meta">
+    //       <div class="question-actions">
+    //         <button class="action-btn copy-btn" title="复制对话" data-action="copy">
+    //           📋
+    //         </button>
+    //         <button class="action-btn reuse-btn" title="重新提问" data-action="reuse">
+    //           🔄
+    //         </button>
+    //         <button class="action-btn delete-btn" title="删除" data-action="delete">
+    //           ❌
+    //         </button>
+    //       </div>
+    //     </div>
     // 绑定问题项事件 (事件委托已移至bindEvents)
     // this.bindQuestionEvents();
   }
@@ -880,7 +892,9 @@ class ChatGPTSidebar {
         if (savedWidth) {
           this.sidebar.style.width = `${savedWidth}px`;
         }
-        const starFilterCheckbox = this.sidebar.querySelector(".star-filter-checkbox");
+        const starFilterCheckbox = this.sidebar.querySelector(
+          ".star-filter-checkbox"
+        );
         if (starFilterCheckbox) {
           starFilterCheckbox.checked = showOnlyStarred;
         }
