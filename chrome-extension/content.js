@@ -151,10 +151,11 @@ class ChatGPTSidebar {
 
     // 确保目录按钮存在
     const header = document.getElementById("conversation-header-actions");
-    if (header && !header.querySelector('.directory-toggle-btn')) {
+    if (header && !header.querySelector(".directory-toggle-btn")) {
       const button = document.createElement("button");
       button.textContent = chrome.i18n.getMessage("toggleButton");
-      button.className = "directory-toggle-btn btn relative btn-ghost text-token-text-primary mx-2";
+      button.className =
+        "directory-toggle-btn btn relative btn-ghost text-token-text-primary mx-2";
       button.addEventListener("click", () => this.toggleSidebar());
       header.prepend(button);
     }
@@ -339,7 +340,9 @@ class ChatGPTSidebar {
         const starBtn = questionItem.querySelector(".star-btn");
         if (starBtn) {
           starBtn.classList.toggle("starred", question.isStarred);
-          starBtn.title = question.isStarred ? chrome.i18n.getMessage("removeStarTitle") : chrome.i18n.getMessage("addStarTitle");
+          starBtn.title = question.isStarred
+            ? chrome.i18n.getMessage("removeStarTitle")
+            : chrome.i18n.getMessage("addStarTitle");
           starBtn.innerHTML = question.isStarred ? "★" : "☆";
         }
       }
@@ -677,8 +680,16 @@ class ChatGPTSidebar {
     if (questionsToRender.length === 0) {
       questionsList.innerHTML = `
         <div class="empty-state">
-          <p>${showOnlyStarred ? chrome.i18n.getMessage("emptyStateStarredHeader") : chrome.i18n.getMessage("emptyStateHeader")}</p>
-          <small>${showOnlyStarred ? chrome.i18n.getMessage("emptyStateStarredDescription") : chrome.i18n.getMessage("emptyStateDescription")}</small>
+          <p>${
+            showOnlyStarred
+              ? chrome.i18n.getMessage("emptyStateStarredHeader")
+              : chrome.i18n.getMessage("emptyStateHeader")
+          }</p>
+          <small>${
+            showOnlyStarred
+              ? chrome.i18n.getMessage("emptyStateStarredDescription")
+              : chrome.i18n.getMessage("emptyStateDescription")
+          }</small>
         </div>
       `;
       return;
@@ -694,13 +705,20 @@ class ChatGPTSidebar {
           <div class="question-text">
             ${this.escapeHtml(question.text)}
           </div>
+          <div class="flex-column">
            <button class="action-btn star-btn ${
              question.isStarred ? "starred" : ""
            }" title="${
-           question.isStarred ? chrome.i18n.getMessage("removeStarTitle") : chrome.i18n.getMessage("addStarTitle")
-         }" data-action="star">
+          question.isStarred
+            ? chrome.i18n.getMessage("removeStarTitle")
+            : chrome.i18n.getMessage("addStarTitle")
+        }" data-action="star">
              ${question.isStarred ? "★" : "☆"}
            </button>
+           <button class="action-btn copy-btn" title="复制对话" data-action="copy">
+              📋
+            </button>
+            </div>
          </div>
         </div>
     `

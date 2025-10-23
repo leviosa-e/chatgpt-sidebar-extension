@@ -118,6 +118,16 @@
 .star-filter-checkbox {
   cursor: pointer;
   /* 如果需要自定义复选框样式，可以在这里添加 */
+  outline: none;
+}
+
+.star-filter-checkbox:focus {
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .sidebar-toggle {
