@@ -77,9 +77,15 @@ class ChatGPTSidebar {
           <span class="sidebar-icon">📝</span>
           对话目录
         </h3>
-        <button class="sidebar-toggle text-token-text-primary no-draggable hover:bg-token-surface-hover keyboard-focused:bg-token-surface-hover touch:h-10 touch:w-10 flex h-9 w-9 items-center justify-center rounded-lg focus:outline-none disabled:opacity-50" title="收起/展开">
-          <span class="toggle-icon">◀</span>
-        </button>
+        <div class="sidebar-controls">
+          <label class="star-filter-label">
+            <input type="checkbox" class="star-filter-checkbox" />
+            只显示星标
+          </label>
+          <button class="sidebar-toggle text-token-text-primary no-draggable hover:bg-token-surface-hover keyboard-focused:bg-token-surface-hover touch:h-10 touch:w-10 flex h-9 w-9 items-center justify-center rounded-lg focus:outline-none disabled:opacity-50" title="收起/展开">
+            <span class="toggle-icon">◀</span>
+          </button>
+        </div>
       </div>
       <div class="sidebar-content">
         <div class="questions-list" id="questions-list">
@@ -253,57 +259,88 @@ class ChatGPTSidebar {
     const toggleBtn = this.sidebar.querySelector(".sidebar-toggle");
     toggleBtn.addEventListener("click", () => this.toggleSidebar());
 
-    // 提取已有问题
-    const extractBtn = this.sidebar.querySelector(".extract-questions-btn");
-    extractBtn.addEventListener("click", () => {
-      this.extractQuestionsFromPage();
-      this.showToast("已尝试提取当前页面问题");
+    // “只显示星标”筛选
+    const starFilterCheckbox = this.sidebar.querySelector(".star-filter-checkbox");
+    starFilterCheckbox.addEventListener("change", () => {
+      this.renderQuestions();
+      chrome.storage.local.set({ chatgpt_show_only_starred: starFilterCheckbox.checked });
     });
 
-    // 清空历史记录
-    const clearBtn = this.sidebar.querySelector(".clear-history-btn");
-    clearBtn.addEventListener("click", () => this.clearHistory());
-
-    // 监听键盘事件
-    document.addEventListener("keydown", (e) => {
-      // Ctrl/Cmd + Shift + S 切换侧边栏
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "S") {
-        e.preventDefault();
-        this.toggleSidebar();
-      }
-    });
-
-    // 监听问题列表点击
+    // 监听问题列表点击（事件委托）
     const questionsList = this.sidebar.querySelector("#questions-list");
     questionsList.addEventListener("click", (e) => {
       const questionItem = e.target.closest(".question-item");
       if (!questionItem) return;
 
       const actionBtn = e.target.closest(".action-btn");
-      const questionId = questionItem.dataset.domId;
-      const question = this.questions.find((q) => q.id === questionId);
+      if (!actionBtn) {
+        // 点击问题本身，滚动到对应位置
+        const domId = questionItem.dataset.domId;
+        this.scrollToQuestion(domId);
+        return;
+      }
 
-      if (!question) return;
+      const questionId = questionItem.dataset.id;
+      const action = actionBtn.dataset.action;
 
-      if (actionBtn) {
-        // 点击的是操作按钮
-        const action = actionBtn.dataset.action;
-        switch (action) {
-          case "copy":
-            this.copyQuestion(question.text);
-            break;
-          case "reuse":
-            this.reuseQuestion(question.text);
-            break;
-          case "delete":
-            this.deleteQuestion(questionId);
-            break;
-        }
-      } else {
-        // 点击的是问题本身
-        this.scrollToQuestion(question.domId);
+      switch (action) {
+        case "star":
+          this.toggleStar(questionId);
+          break;
+        case "copy":
+        case "reuse":
+        case "delete":
+          this.handleQuestionAction(action, questionId);
+          break;
       }
     });
+  }
+
+  handleQuestionAction(action, questionId) {
+    const question = this.questions.find((q) => q.id === questionId);
+    if (!question) return;
+
+    switch (action) {
+      case "copy":
+        this.copyQuestion(question.text);
+        break;
+      case "reuse":
+        this.reuseQuestion(question.text);
+        break;
+      case "delete":
+        this.deleteQuestion(questionId);
+        break;
+    }
+  }
+
+  async toggleStar(questionId) {
+    const question = this.questions.find((q) => q.id === questionId);
+    if (!question) return;
+
+    question.isStarred = !question.isStarred;
+    await this.saveQuestions();
+
+    const showOnlyStarred = this.sidebar.querySelector(
+      ".star-filter-checkbox"
+    )?.checked;
+
+    // 如果在“只显示星标”模式下取消星标，则需要重绘以移除该项
+    if (showOnlyStarred && !question.isStarred) {
+      this.renderQuestions();
+    } else {
+      // 否则，只更新DOM元素以避免闪烁
+      const questionItem = this.sidebar.querySelector(
+        `.question-item[data-id="${questionId}"]`
+      );
+      if (questionItem) {
+        const starBtn = questionItem.querySelector(".star-btn");
+        if (starBtn) {
+          starBtn.classList.toggle("starred", question.isStarred);
+          starBtn.title = question.isStarred ? "取消星标" : "添加星标";
+          starBtn.innerHTML = question.isStarred ? "★" : "☆";
+        }
+      }
+    }
   }
 
   /**
@@ -605,6 +642,7 @@ class ChatGPTSidebar {
       text: trimmedText,
       timestamp: new Date().toLocaleString("zh-CN"),
       domId: domId,
+      isStarred: false, // 添加星标属性
     };
 
     this.questions.push(question);
@@ -614,10 +652,7 @@ class ChatGPTSidebar {
       this.questions = this.questions.slice(-50); // 保留最新的50条
     }
 
-    // 保存到存储
     await this.saveQuestions();
-
-    // 重新渲染
     this.renderQuestions();
 
     // console.log("新问题已添加:", question.text);
@@ -629,39 +664,49 @@ class ChatGPTSidebar {
    */
   renderQuestions() {
     const questionsList = this.sidebar.querySelector("#questions-list");
+    const showOnlyStarred = this.sidebar.querySelector('.star-filter-checkbox')?.checked || false;
 
-    if (this.questions.length === 0) {
+    const questionsToRender = showOnlyStarred
+      ? this.questions.filter(q => q.isStarred)
+      : this.questions;
+
+    if (questionsToRender.length === 0) {
       questionsList.innerHTML = `
         <div class="empty-state">
-          <p>暂无对话内容</p>
-          <small>开始对话后，您发送的消息将显示在这里</small>
+          <p>${showOnlyStarred ? '没有加星标的对话' : '暂无对话内容'}</p>
+          <small>${showOnlyStarred ? '点击对话旁的星星收藏' : '开始对话后，您发送的消息将显示在这里'}</small>
         </div>
       `;
       return;
     }
 
-    questionsList.innerHTML = this.questions
+    questionsList.innerHTML = questionsToRender
       .map(
         (question) => `
       <div class="question-item" data-id="${question.id}" ${
           question.domId ? `data-dom-id="${question.domId}"` : ""
         } title="点击定位对话位置">
-        <div class="question-text">
-          ${this.escapeHtml(question.text)}
-        </div>
-        <div class="question-meta">
-          <div class="question-actions">
-            <button class="action-btn copy-btn" title="复制对话" data-action="copy">
-              📋
-            </button>
-            <button class="action-btn reuse-btn" title="重新提问" data-action="reuse">
-              🔄
-            </button>
-            <button class="action-btn delete-btn" title="删除" data-action="delete">
-              ❌
-            </button>
+        <div class="question-content-wrapper">
+          <div class="question-text">
+            ${this.escapeHtml(question.text)}
+          </div>
+          <div class="question-meta">
+            <div class="question-actions">
+              <button class="action-btn copy-btn" title="复制对话" data-action="copy">
+                📋
+              </button>
+              <button class="action-btn reuse-btn" title="重新提问" data-action="reuse">
+                🔄
+              </button>
+              <button class="action-btn delete-btn" title="删除" data-action="delete">
+                ❌
+              </button>
+            </div>
           </div>
         </div>
+        <button class="action-btn star-btn ${question.isStarred ? 'starred' : ''}" title="${question.isStarred ? '取消星标' : '添加星标'}" data-action="star">
+          ${question.isStarred ? '★' : '☆'}
+        </button>
       </div>
     `
       )
@@ -820,9 +865,11 @@ class ChatGPTSidebar {
       const result = await chrome.storage.local.get([
         "sidebar_collapsed",
         "chatgpt_sidebar_width",
+        "chatgpt_show_only_starred",
       ]);
       this.isCollapsed = result.sidebar_collapsed || false;
       const savedWidth = result.chatgpt_sidebar_width;
+      const showOnlyStarred = result.chatgpt_show_only_starred || false;
 
       if (this.sidebar) {
         if (this.isCollapsed) {
@@ -832,6 +879,10 @@ class ChatGPTSidebar {
         }
         if (savedWidth) {
           this.sidebar.style.width = `${savedWidth}px`;
+        }
+        const starFilterCheckbox = this.sidebar.querySelector(".star-filter-checkbox");
+        if (starFilterCheckbox) {
+          starFilterCheckbox.checked = showOnlyStarred;
         }
       }
     } catch (err) {

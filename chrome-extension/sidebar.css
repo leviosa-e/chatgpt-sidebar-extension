@@ -99,6 +99,27 @@
   color: var(--sidebar-icon-color);
 }
 
+.sidebar-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.star-filter-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--sidebar-text-color);
+  cursor: pointer;
+  user-select: none; /* 防止文本被选中 */
+}
+
+.star-filter-checkbox {
+  cursor: pointer;
+  /* 如果需要自定义复选框样式，可以在这里添加 */
+}
+
 .sidebar-toggle {
   background: none;
   border: none;
