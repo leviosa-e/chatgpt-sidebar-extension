@@ -701,7 +701,7 @@ class ChatGPTSidebar {
       <div class="question-item" data-id="${question.id}" ${
           question.domId ? `data-dom-id="${question.domId}"` : ""
         } title="${chrome.i18n.getMessage("scrollToConversationTitle")}">
-        <div class="question-content-wrapper">
+        <div class="question-content-wrapper space-between">
           <div class="question-text">
             ${this.escapeHtml(question.text)}
           </div>

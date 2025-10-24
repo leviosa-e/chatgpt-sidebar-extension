@@ -130,6 +130,10 @@
   gap: 4px;
 }
 
+.space-between {
+  justify-content: space-between;
+}
+
 .sidebar-toggle {
   background: none;
   border: none;
