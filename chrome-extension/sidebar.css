@@ -212,6 +212,7 @@
   line-height: 1.5;
   color: var(--sidebar-text-color);
   word-break: break-word;
+  height: 4.5em; /* 1.5em (line-height) * 3 (line-clamp) */
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
