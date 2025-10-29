@@ -11,7 +11,6 @@ class ChatGPTSidebar {
     this.isCollapsed = false;
     this.questions = [];
     this.observer = null;
-    this.storageKey = "chatgpt_questions_history";
     this.currentURL = window.location.href;
 
     this.init();
@@ -41,21 +40,17 @@ class ChatGPTSidebar {
     } else {
       setTimeout(() => this.createSidebar(), 3000);
     }
-
-    // 加载侧边栏设置
-    await this.loadSidebarSettings();
-    // await this.loadQuestions();
-
-    // 开始监听对话变化
-    this.startObserving();
-    // 监听DOM变化以确保UI元素持续存在
-    this.initDOMObserver();
   }
 
   /**
    * 创建侧边栏DOM结构
    */
-  createSidebar() {
+  async createSidebar() {
+    // 防止重复创建
+    if (document.getElementById("yuanbao-sidebar")) {
+      return;
+    }
+
     // 查找主容器
     const mainContainer = this.findMainContainer();
     if (!mainContainer) {
@@ -90,36 +85,35 @@ class ChatGPTSidebar {
       <div class="sidebar-content">
         <div class="questions-list" id="questions-list">
           <div class="empty-state">
-            <p>暂无对话内容</p>
-            <small>开始对话后，您发送的消息将显示在这里</small>
+            <p>${chrome.i18n.getMessage("emptyStateHeader")}</p>
+            <small>${chrome.i18n.getMessage("emptyStateDescription")}</small>
           </div>
         </div>
+         
       </div>
-        `;
-    // <div class="sidebar-footer">
-    //   <button class="extract-questions-btn" title="提取已有问题">
-    //     <span>🔄</span> 提取问题
-    //   </button>
-    //   <button class="clear-history-btn" title="清空历史记录">
-    //     <span>🗑️</span> 清空记录
-    //   </button>
-    // </div>
+    `;
 
     // 插入侧边栏
     this.insertSidebar(mainContainer);
 
-    // 绑定事件
+    // --- 初始化流程开始 ---
+
+    // 1. 加载设置和数据
+    await this.loadSidebarSettings();
+    await this.loadQuestions();
+
+    // 2. 绑定事件
     this.bindEvents();
 
-    // 设置调整大小功能
+    // 3. 设置调整大小功能
     this.setupResizing();
 
-    // 渲染历史问题
-    this.renderQuestions();
-
+    // 4. 启动自动提取和监听
     this.waitForContentAndExtract();
+    this.initDOMObserver();
+    this.startObserving();
 
-    console.log("腾讯元宝侧边栏已成功创建");
+    console.log("侧边栏已成功创建和初始化");
   }
 
   initDOMObserver() {
@@ -161,9 +155,10 @@ class ChatGPTSidebar {
     }
   }
 
-  handleConversationSwitch() {
+  async handleConversationSwitch() {
     this.questions = [];
     this.renderQuestions();
+    await this.loadQuestions();
     this.waitForContentAndExtract();
   }
 
@@ -537,9 +532,7 @@ class ChatGPTSidebar {
 
     messageSelectors.forEach((selector) => {
       const messages = document.querySelectorAll(selector);
-      Array.from(messages)
-        .reverse()
-        .forEach((msg) => {
+      Array.from(messages).forEach((msg) => {
           const questionData = this.extractQuestionFromElement(msg);
 
           if (
@@ -921,9 +914,17 @@ class ChatGPTSidebar {
    * 加载历史问题
    */
   async loadQuestions() {
+    const conversationId = this.getConversationId();
+    if (!conversationId) {
+      this.questions = [];
+      this.renderQuestions();
+      return;
+    }
+    const storageKey = `chatgpt_history_${conversationId}`;
+
     try {
-      const result = await chrome.storage.local.get([this.storageKey]);
-      this.questions = result[this.storageKey] || [];
+      const result = await chrome.storage.local.get([storageKey]);
+      this.questions = result[storageKey] || [];
       this.renderQuestions();
     } catch (err) {
       console.warn("加载历史记录失败:", err);
@@ -935,13 +936,24 @@ class ChatGPTSidebar {
    * 保存问题到存储
    */
   async saveQuestions() {
+    const conversationId = this.getConversationId();
+    if (!conversationId) {
+      return; // Don't save if not in a conversation
+    }
+    const storageKey = `chatgpt_history_${conversationId}`;
+
     try {
       await chrome.storage.local.set({
-        [this.storageKey]: this.questions,
+        [storageKey]: this.questions,
       });
     } catch (err) {
       console.warn("保存历史记录失败:", err);
     }
+  }
+
+  getConversationId() {
+    const match = window.location.href.match(/\/c\/([a-zA-Z0-9-]+)/);
+    return match ? match[1] : null;
   }
 
   /**
