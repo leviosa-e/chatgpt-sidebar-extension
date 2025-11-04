@@ -758,7 +758,7 @@ class ChatGPTSidebar {
     if (element) {
       element.scrollIntoView({
         behavior: "smooth",
-        block: "start",
+        block: "center",
       });
 
       // 添加高亮效果
