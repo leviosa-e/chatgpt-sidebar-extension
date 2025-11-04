@@ -169,7 +169,8 @@ class ChatGPTSidebar {
     const intervalId = setInterval(() => {
       // Use a selector that indicates the chat is loaded.
       const chatLoadedIndicator = document.querySelector(
-        '[class*="hyc-content-text"], [class*="whitespace-pre-wrap"]'
+        '[class*="user-message-bubble-color"]'
+        // '[class*="hyc-content-text"], [class*="whitespace-pre-wrap"]'
       );
 
       if (chatLoadedIndicator) {
@@ -463,15 +464,15 @@ class ChatGPTSidebar {
   checkForNewQuestions(node) {
     // 查找可能包含用户消息的元素
     const messageSelectors = [
-      '[class*="whitespace-pre-wrap"]',
-      '[class*="user"]',
-      '[class*="message"]',
-      '[class*="question"]',
-      '[class*="query"]',
-      '[class*="prompt"]',
-      '[data-role="user"]',
-      '[data-from="user"]',
-      '[data-testid*="user-message"]',
+      '[class*="user-message-bubble-color"]',
+      // '[class*="user"]',
+      // '[class*="message"]',
+      // '[class*="question"]',
+      // '[class*="query"]',
+      // '[class*="prompt"]',
+      // '[data-role="user"]',
+      // '[data-from="user"]',
+      // '[data-testid*="user-message"]',
     ];
 
     messageSelectors.forEach((selector) => {
@@ -513,8 +514,8 @@ class ChatGPTSidebar {
    */
   extractQuestionsFromPage(isManual = false) {
     const messageSelectors = [
-      '[class*="hyc-content-text"]',
-      '[class*="whitespace-pre-wrap"]',
+      '[class*="user-message-bubble-color"]',
+      // '[class*="whitespace-pre-wrap"]',
       // '[class*="user-message"]',
       // '[class*="human-message"]',
       // '[class*="user"]',
@@ -533,30 +534,30 @@ class ChatGPTSidebar {
     messageSelectors.forEach((selector) => {
       const messages = document.querySelectorAll(selector);
       Array.from(messages).forEach((msg) => {
-          const questionData = this.extractQuestionFromElement(msg);
+        const questionData = this.extractQuestionFromElement(msg);
 
-          if (
-            questionData &&
-            !this.questions.some((q) => q.text === questionData.text)
-          ) {
-            // 如果提取到有效问题，并且未被记录过，则添加到问题列表里
-            if (this.addQuestion(questionData.text, questionData.domId)) {
-              newQuestionsCount++;
-            }
-          } else if (
-            questionData &&
-            this.questions.some((q) => q.text === questionData.text && !q.domId)
-          ) {
-            // 如果问题已存在但没有domId，则更新它
-            const existingQuestion = this.questions.find(
-              (q) => q.text === questionData.text
-            );
-            if (existingQuestion) {
-              existingQuestion.domId = questionData.domId;
-              this.saveQuestions();
-            }
+        if (
+          questionData &&
+          !this.questions.some((q) => q.text === questionData.text)
+        ) {
+          // 如果提取到有效问题，并且未被记录过，则添加到问题列表里
+          if (this.addQuestion(questionData.text, questionData.domId)) {
+            newQuestionsCount++;
           }
-        });
+        } else if (
+          questionData &&
+          this.questions.some((q) => q.text === questionData.text && !q.domId)
+        ) {
+          // 如果问题已存在但没有domId，则更新它
+          const existingQuestion = this.questions.find(
+            (q) => q.text === questionData.text
+          );
+          if (existingQuestion) {
+            existingQuestion.domId = questionData.domId;
+            this.saveQuestions();
+          }
+        }
+      });
     });
 
     if (isManual) {
