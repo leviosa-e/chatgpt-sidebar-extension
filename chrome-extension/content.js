@@ -274,12 +274,12 @@ class ChatGPTSidebar {
       const actionBtn = e.target.closest(".action-btn");
       if (!actionBtn) {
         // 点击问题本身，滚动到对应位置
-        const domId = questionItem.dataset.domId;
-        this.scrollToQuestion(domId);
+        const dataMessageId = questionItem.dataset.messageId;
+        this.scrollToQuestion(dataMessageId);
         return;
       }
 
-      const questionId = questionItem.dataset.id;
+      const questionId = questionItem.dataset.messageId;
       const action = actionBtn.dataset.action;
 
       switch (action) {
@@ -296,7 +296,7 @@ class ChatGPTSidebar {
   }
 
   handleQuestionAction(action, questionId) {
-    const question = this.questions.find((q) => q.id === questionId);
+    const question = this.questions.find((q) => q.dataMessageId === questionId);
     if (!question) return;
 
     switch (action) {
@@ -313,7 +313,7 @@ class ChatGPTSidebar {
   }
 
   async toggleStar(questionId) {
-    const question = this.questions.find((q) => q.id === questionId);
+    const question = this.questions.find((q) => q.dataMessageId === questionId);
     if (!question) return;
 
     question.isStarred = !question.isStarred;
@@ -329,7 +329,7 @@ class ChatGPTSidebar {
     } else {
       // 否则，只更新DOM元素以避免闪烁
       const questionItem = this.sidebar.querySelector(
-        `.question-item[data-id="${questionId}"]`
+        `.question-item[data-message-id="${questionId}"]`
       );
       if (questionItem) {
         const starBtn = questionItem.querySelector(".star-btn");
@@ -513,18 +513,8 @@ class ChatGPTSidebar {
    */
   extractQuestionsFromPage(isManual = false) {
     const messageSelectors = [
-      '[class*="hyc-content-text"]',
-      '[class*="whitespace-pre-wrap"]',
-      // '[class*="user-message"]',
-      // '[class*="human-message"]',
-      // '[class*="user"]',
-      // '[class*="human"]',
-      // '[data-role="user"]',
-      // '[data-from="user"]',
-      // '[class*="question"]',
-      // '[class*="query"]',
-      // '[class*="prompt"]',
-      // '[data-testid*="user-message"]',
+      // '[class*="whitespace-pre-wrap"]',
+      '[data-message-author-role="user"]',
     ];
 
     const foundQuestions = new Set();
@@ -540,19 +530,21 @@ class ChatGPTSidebar {
           !this.questions.some((q) => q.text === questionData.text)
         ) {
           // 如果提取到有效问题，并且未被记录过，则添加到问题列表里
-          if (this.addQuestion(questionData.text, questionData.domId)) {
+          if (this.addQuestion(questionData.text, msg.dataset.messageId)) {
             newQuestionsCount++;
           }
         } else if (
           questionData &&
-          this.questions.some((q) => q.text === questionData.text && !q.domId)
+          this.questions.some(
+            (q) => q.text === questionData.text && !q.dataMessageId
+          )
         ) {
-          // 如果问题已存在但没有domId，则更新它
+          // 如果问题已存在但没有dataMessageId，则更新它
           const existingQuestion = this.questions.find(
             (q) => q.text === questionData.text
           );
           if (existingQuestion) {
-            existingQuestion.domId = questionData.domId;
+            existingQuestion.dataMessageId = msg.dataset.messageId;
             this.saveQuestions();
           }
         }
@@ -575,21 +567,21 @@ class ChatGPTSidebar {
     if (!element || element.closest(".yuanbao-sidebar")) return null; // 忽略侧边栏内的内容
 
     // 如果元素没有ID，则分配一个
-    if (!element.id) {
-      element.id = this.generateUniqueId();
-    }
-    const domId = element.id;
+    // if (!element.id) {
+    //   element.id = this.generateUniqueId();
+    // }
+    // const domId = element.id;
 
     // 尝试多种方式提取文本
     const textSelectors = [
-      ".text-content",
-      ".message-text",
-      ".content",
-      "p",
-      "span",
+      ".whitespace-pre-wrap",
       "div",
-      "pre",
-      "code",
+      // ".message-text",
+      // ".content",
+      // "p",
+      // "span",
+      // "pre",
+      // "code",
     ];
 
     for (const selector of textSelectors) {
@@ -597,7 +589,7 @@ class ChatGPTSidebar {
       if (textEl) {
         const text = (textEl.textContent || textEl.innerText || "").trim();
         if (text && text.length > 0 && text.length < 500) {
-          return { text, domId };
+          return { text };
         }
       }
     }
@@ -605,7 +597,7 @@ class ChatGPTSidebar {
     // 如果没有找到子元素，直接使用元素本身的文本
     const text = (element.textContent || element.innerText || "").trim();
     if (text && text.length > 0 && text.length < 500) {
-      return { text, domId };
+      return { text };
     }
 
     return null;
@@ -614,33 +606,37 @@ class ChatGPTSidebar {
   /**
    * 添加新问题
    * @param {string} questionText
-   * @param {string | null} domId
+   * @param {string | null} dataMessageId
    * @returns {boolean} - 是否成功添加了新问题
    */
-  async addQuestion(questionText, domId = null) {
+  async addQuestion(questionText, dataMessageId = null) {
     if (!questionText || questionText.trim().length === 0) return false;
 
     const trimmedText = questionText.trim();
 
     // 避免重复添加
     if (this.questions.some((q) => q.text === trimmedText)) {
-      // 如果问题已存在，但domId没有，则更新
+      // 如果问题已存在，但dataMessageId没有，则更新
       const existingQuestion = this.questions.find(
         (q) => q.text === trimmedText
       );
-      if (existingQuestion && !existingQuestion.domId && domId) {
-        existingQuestion.domId = domId;
+      if (
+        existingQuestion &&
+        !existingQuestion.dataMessageId &&
+        dataMessageId
+      ) {
+        existingQuestion.dataMessageId = dataMessageId;
         await this.saveQuestions();
-        this.renderQuestions(); // 更新UI以包含domId
+        this.renderQuestions(); // 更新UI以包含dataMessageId
       }
       return false;
     }
 
     const question = {
-      id: domId,
+      id: dataMessageId,
       text: trimmedText,
       timestamp: new Date().toLocaleString("zh-CN"),
-      domId: domId,
+      dataMessageId: dataMessageId,
       isStarred: false, // 添加星标属性
     };
 
@@ -691,9 +687,11 @@ class ChatGPTSidebar {
     questionsList.innerHTML = questionsToRender
       .map(
         (question) => `
-      <div class="question-item" data-id="${question.id}" ${
-          question.domId ? `data-dom-id="${question.domId}"` : ""
-        } title="${chrome.i18n.getMessage("scrollToConversationTitle")}">
+      <div class="question-item" data-message-id="${
+        question.dataMessageId
+      }" data-id="${question.id}" title="${chrome.i18n.getMessage(
+          "scrollToConversationTitle"
+        )}">
         <div class="question-content-wrapper space-between">
           <div class="question-text">
             ${this.escapeHtml(question.text)}
@@ -744,17 +742,19 @@ class ChatGPTSidebar {
 
   /**
    * 滚动到指定问题
-   * @param {string} domId
+   * @param {string} dataMessageId
    */
-  scrollToQuestion(domId) {
-    if (!domId) {
+  scrollToQuestion(dataMessageId) {
+    if (!dataMessageId) {
       this.showToast("该问题在当前页面没有对应的位置");
       return;
     }
 
-    const element = document.getElementById(domId);
+    const element = document.querySelector(
+      `[data-message-id="${dataMessageId}"]`
+    );
 
-    // console.log('🚀 ~ scrollToQuestion domId', domId)
+    // console.log('🚀 ~ scrollToQuestion dataMessageId', dataMessageId)
     if (element) {
       element.scrollIntoView({
         behavior: "smooth",
