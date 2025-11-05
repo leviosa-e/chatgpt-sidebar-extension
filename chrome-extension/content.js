@@ -1,670 +1,127 @@
-// ChatGPT 侧边栏助手 - 内容脚本
-(function () {
-  // 为当前标签页生成唯一标识符
-  const tabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  console.log(`ChatGPT 侧边栏助手: 标签页ID = ${tabId}`);
+/**
+ * ChatGPT 侧边栏助手 - Content Script
+ * 用于在 ChatGPT 对话界面中添加侧边栏功能
+ */
+class ChatGPTSidebar {
+  constructor() {
+    // DOM 元素引用
+    this.sidebar = null;
 
-  // 存储设置和状态
-  const settings = {
-    dockWidth: 350,
-    isVisible: false,
-    showOnlyStarred: false,
-    starredItems: {},
-  };
+    this.isResizing = false;
+    this.isCollapsed = false;
+    this.questions = [];
+    this.observer = null;
+    this.currentURL = window.location.href;
 
-  // DOM 元素引用
-  let toggleButton = null;
-  let dockWindow = null;
-  let dockContent = null;
-  let resizer = null;
-  let isResizing = false;
+    this.init();
+  }
 
-  // 初始化函数
-  function init() {
-    console.log("ChatGPT 侧边栏助手: 开始初始化");
+  /**
+   * 生成唯一ID
+   */
+  generateUniqueId() {
+    const uniqueId = `ybq-${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    // console.log('🚀 ~ generateUniqueId uniqueId', uniqueId)
+    return uniqueId;
+  }
 
-    // 检查是否已经初始化
-    if (document.querySelector(".directory-toggle-button")) {
-      console.log("ChatGPT 侧边栏助手: 已存在，跳过初始化");
+  /**
+   * 初始化侧边栏
+   */
+  async init() {
+    // 等待页面加载完成
+    // 在我自己的 mac air 上依然会有水合 dismatch 的问题，所以先延时 3s 作为临时解决方案
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () =>
+        setTimeout(() => this.createSidebar(), 3000)
+      );
+    } else {
+      setTimeout(() => this.createSidebar(), 3000);
+    }
+  }
+
+  /**
+   * 创建侧边栏DOM结构
+   */
+  async createSidebar() {
+    // 防止重复创建
+    if (document.getElementById("yuanbao-sidebar")) {
       return;
     }
 
-    // 加载保存的设置
-    loadSettings().then(() => {
-      // 创建开关按钮
-      createToggleButton();
-
-      // 创建dock窗口
-      createDockWindow();
-
-      // 设置 MutationObserver 监听页面变化
-      setupMutationObserver();
-
-      // 延迟扫描页面，确保DOM已完全加载
-      // 延迟扫描页面，确保DOM已完全加载
-      setTimeout(() => {
-        // 先进行一次扫描，检查是否有对话内容
-        scanPageForConversations();
-
-        // 如果没有找到对话，再尝试几次
-        let retryCount = 0;
-        const maxRetries = 5;
-        const retryInterval = 1000;
-
-        function retryScanning() {
-          const hasConversations =
-            document.querySelectorAll('[data-message-author-role="user"]')
-              .length > 0;
-
-          if (!hasConversations && retryCount < maxRetries) {
-            console.log(
-              `ChatGPT 侧边栏助手: 重试扫描页面 (${
-                retryCount + 1
-              }/${maxRetries})`
-            );
-            retryCount++;
-            scanPageForConversations();
-            setTimeout(retryScanning, retryInterval);
-          }
-        }
-
-        retryScanning();
-      }, 1000);
-
-      console.log("ChatGPT 侧边栏助手: 初始化完成");
-    });
-  }
-
-  // 加载保存的设置
-  function loadSettings() {
-    return new Promise((resolve) => {
-      // 为标签页特定的设置添加前缀
-      const keys = [
-        "dockWidth", // 全局设置
-        "isVisible", // 全局设置
-        `showOnlyStarred_${tabId}`, // 标签页特定
-        `starredItems_${tabId}`, // 标签页特定
-      ];
-
-      chrome.storage.local.get(keys, (result) => {
-        if (result.dockWidth) settings.dockWidth = result.dockWidth;
-        if (result.isVisible !== undefined)
-          settings.isVisible = result.isVisible;
-        if (result[`showOnlyStarred_${tabId}`] !== undefined) {
-          settings.showOnlyStarred = result[`showOnlyStarred_${tabId}`];
-        }
-        if (result[`starredItems_${tabId}`]) {
-          settings.starredItems = result[`starredItems_${tabId}`];
-        }
-        resolve();
-      });
-    });
-  }
-
-  // 保存设置
-  function saveSettings(key, value) {
-    const data = {};
-
-    // 为标签页特定的设置添加前缀
-    if (key === "showOnlyStarred" || key === "starredItems") {
-      const prefixedKey = `${key}_${tabId}`;
-      data[prefixedKey] = value;
-      chrome.storage.local.set(data);
-    } else {
-      // 全局设置保持原样
-      data[key] = value;
-      chrome.storage.local.set(data);
+    // 查找主容器
+    const mainContainer = this.findMainContainer();
+    if (!mainContainer) {
+      console.warn("未找到合适的主容器，延迟重试...");
+      setTimeout(() => this.createSidebar(), 1000);
+      return;
     }
 
-    settings[key] = value;
-  }
+    // 创建侧边栏容器
+    this.sidebar = document.createElement("div");
+    this.sidebar.id = "yuanbao-sidebar";
+    this.sidebar.className = "yuanbao-sidebar";
 
-  // 创建开关按钮
-  function createToggleButton(retryCount = 0) {
-    const maxRetries = 5;
-    const retryDelay = 3000;
-
-    // 查找工具栏容器
-    const toolbarContainer = document.querySelector(
-      "#conversation-header-actions"
-    );
-    if (!toolbarContainer) {
-      console.log("ChatGPT 侧边栏助手: 未找到工具栏容器，稍后重试");
-      if (retryCount < maxRetries) {
-        setTimeout(() => {
-          console.log(
-            `ChatGPT 侧边栏助手: 第 ${retryCount + 1} 次重试创建开关按钮`
-          );
-          createToggleButton(retryCount + 1);
-        }, retryDelay);
-      } else {
-        console.log(
-          "ChatGPT 侧边栏助手: 已达到最大重试次数，停止尝试创建开关按钮"
-        );
-      }
-      return false;
-    }
-
-    toggleButton = document.createElement("div");
-    toggleButton.className =
-      "directory-toggle-button btn relative btn-ghost text-token-text-primary mx-2";
-
-    // 创建按钮内容
-    const buttonContent = document.createElement("div");
-    buttonContent.className = "chatgpt-toggle-content";
-    buttonContent.innerHTML = `
-      <button class="chatgpt-toggle-text">目录</button>
+    // 创建侧边栏内容
+    this.sidebar.innerHTML = `
+      <div class="sidebar-resizer"></div>
+      <div class="sidebar-header h-header-height">
+        <h3 class="sidebar-title text-token-text-primary">
+          <span class="sidebar-icon">📝</span>
+          ${chrome.i18n.getMessage("sidebarTitle")}
+        </h3>
+        <div class="sidebar-controls">
+          <label class="star-filter-label">
+            <input type="checkbox" class="star-filter-checkbox" />
+            ${chrome.i18n.getMessage("filterStarred")}
+          </label>
+          <button class="sidebar-toggle text-token-text-primary no-draggable hover:bg-token-surface-hover keyboard-focused:bg-token-surface-hover touch:h-10 touch:w-10 flex h-9 w-9 items-center justify-center rounded-lg focus:outline-none disabled:opacity-50" title="收起/展开">
+            <span class="toggle-icon">◀</span>
+          </button>
+        </div>
+      </div>
+      <div class="sidebar-content">
+        <div class="questions-list" id="questions-list">
+          <div class="empty-state">
+            <p>${chrome.i18n.getMessage("emptyStateHeader")}</p>
+            <small>${chrome.i18n.getMessage("emptyStateDescription")}</small>
+          </div>
+        </div>
+         
+      </div>
     `;
 
-    toggleButton.appendChild(buttonContent);
-    toggleButton.title = "显示对话目录";
+    // 插入侧边栏
+    this.insertSidebar(mainContainer);
 
-    if (settings.isVisible) {
-      toggleButton.classList.add("active");
-    }
+    // --- 初始化流程开始 ---
 
-    toggleButton.addEventListener("click", toggleDock);
+    // 1. 加载设置和数据
+    await this.loadSidebarSettings();
+    await this.loadQuestions();
 
-    // TODO 将按钮添加到工具栏容器的最后
-    toolbarContainer.prepend(toggleButton);
+    // 2. 绑定事件
+    this.bindEvents();
 
-    console.log("ChatGPT 侧边栏助手: 开关按钮创建完成");
-    return true;
+    // 3. 设置调整大小功能
+    this.setupResizing();
+
+    // 4. 启动自动提取和监听
+    this.waitForContentAndExtract();
+    this.initDOMObserver();
+    this.startObserving();
+
+    console.log("侧边栏已成功创建和初始化");
   }
 
-  // 显示开关按钮
-  function showToggleButton() {
-    if (toggleButton) {
-      toggleButton.style.display = "block";
-      console.log("ChatGPT 侧边栏助手: 显示开关按钮");
-    }
-  }
-
-  // 隐藏开关按钮
-  function hideToggleButton() {
-    if (toggleButton) {
-      toggleButton.style.display = "none";
-      // 如果按钮隐藏，同时隐藏dock
-      if (settings.isVisible) {
-        hideDock();
-      }
-      console.log("ChatGPT 侧边栏助手: 隐藏开关按钮");
-    }
-  }
-
-  // 创建dock窗口
-  function createDockWindow() {
-    dockWindow = document.createElement("div");
-    dockWindow.className = "chatgpt-dock";
-    if (settings.isVisible) {
-      dockWindow.classList.add("show");
-      document.body.classList.add("chatgpt-dock-active");
-      document.body.style.marginRight = `${settings.dockWidth}px`;
-    }
-
-    // 设置dock宽度
-    dockWindow.style.width = `${settings.dockWidth}px`;
-
-    // 创建调整大小控制条
-    resizer = document.createElement("div");
-    resizer.className = "chatgpt-dock-resizer";
-
-    // 创建窗口头部
-    const header = document.createElement("div");
-    header.className = "chatgpt-dock-header";
-
-    const title = document.createElement("h2");
-    title.className = "chatgpt-dock-title";
-    title.textContent = "对话目录";
-
-    // 创建星标过滤器（放在头部）
-    const starFilter = document.createElement("div");
-    starFilter.className = "chatgpt-star-filter";
-
-    const filterLabel = document.createElement("label");
-    filterLabel.innerHTML =
-      '只显示星标 <input type="checkbox" id="chatgpt-star-filter-toggle">';
-
-    const checkbox = filterLabel.querySelector("#chatgpt-star-filter-toggle");
-    checkbox.checked = settings.showOnlyStarred;
-    checkbox.addEventListener("change", function () {
-      const showOnlyStarred = this.checked;
-      saveSettings("showOnlyStarred", showOnlyStarred);
-      applyStarFilter();
-    });
-
-    starFilter.appendChild(filterLabel);
-
-    const controls = document.createElement("div");
-    controls.className = "chatgpt-dock-controls";
-
-    // 只保留关闭按钮
-    const closeBtn = document.createElement("button");
-    closeBtn.className = "chatgpt-dock-control-btn chatgpt-close-btn";
-    closeBtn.innerHTML = "×";
-    closeBtn.title = "关闭";
-    closeBtn.addEventListener("click", hideDock);
-
-    controls.appendChild(closeBtn);
-
-    header.appendChild(title);
-    header.appendChild(starFilter);
-    header.appendChild(controls);
-
-    // 创建内容区域
-    dockContent = document.createElement("div");
-    dockContent.className = "chatgpt-dock-content";
-
-    // 组装dock窗口
-    dockWindow.appendChild(resizer);
-    dockWindow.appendChild(header);
-    dockWindow.appendChild(dockContent);
-
-    // 添加到页面
-    document.body.appendChild(dockWindow);
-
-    // 设置调整大小功能
-    setupResizing();
-
-    console.log("ChatGPT 侧边栏助手: Dock窗口创建完成");
-  }
-
-  // 切换dock显示/隐藏
-  function toggleDock() {
-    if (settings.isVisible) {
-      hideDock();
-    } else {
-      showDock();
-    }
-  }
-
-  // 显示dock
-  function showDock() {
-    settings.isVisible = true;
-    saveSettings("isVisible", true);
-
-    dockWindow.classList.add("show");
-    toggleButton.classList.add("active");
-    document.body.classList.add("chatgpt-dock-active");
-    document.body.style.marginRight = `${settings.dockWidth}px`;
-
-    // 扫描页面内容
-    scanPageForConversations();
-
-    console.log("ChatGPT 侧边栏助手: Dock已显示");
-  }
-
-  // 隐藏dock
-  function hideDock() {
-    settings.isVisible = false;
-    saveSettings("isVisible", false);
-
-    dockWindow.classList.remove("show");
-    toggleButton.classList.remove("active");
-    document.body.classList.remove("chatgpt-dock-active");
-    document.body.style.marginRight = "";
-
-    console.log("ChatGPT 侧边栏助手: Dock已隐藏");
-  }
-
-  // 设置调整大小功能
-  function setupResizing() {
-    let startX, startWidth, startBodyMargin;
-
-    resizer.addEventListener("mousedown", function (e) {
-      isResizing = true;
-      startX = e.clientX;
-      startWidth = parseInt(getComputedStyle(dockWindow).width, 10);
-      startBodyMargin =
-        parseInt(getComputedStyle(document.body).marginRight, 10) || 0;
-
-      // 添加resizing类，禁用过渡效果
-      dockWindow.classList.add("resizing");
-      document.body.classList.add("yuanbao-dock-resizing");
-
-      document.addEventListener("mousemove", handleResize);
-      document.addEventListener("mouseup", stopResize);
-
-      e.preventDefault();
-    });
-
-    function handleResize(e) {
-      if (!isResizing) return;
-
-      // 计算新宽度（向左拖拽增加宽度）
-      const deltaX = startX - e.clientX;
-      const newWidth = startWidth + deltaX;
-
-      // 限制宽度范围
-      if (newWidth >= 250 && newWidth <= 600) {
-        dockWindow.style.width = newWidth + "px";
-
-        // 同时调整body的margin
-        if (settings.isVisible) {
-          document.body.style.marginRight = newWidth + "px";
-        }
-
-        // 保存设置
-        settings.dockWidth = newWidth;
-        saveSettings("dockWidth", newWidth);
-      }
-    }
-
-    function stopResize() {
-      isResizing = false;
-
-      // 移除resizing类，恢复过渡效果
-      dockWindow.classList.remove("resizing");
-      document.body.classList.remove("chatgpt-dock-resizing");
-
-      document.removeEventListener("mousemove", handleResize);
-      document.removeEventListener("mouseup", stopResize);
-    }
-  }
-
-  // 扫描页面寻找对话内容
-  function scanPageForConversations() {
-    console.log("ChatGPT 侧边栏助手: 开始扫描页面对话");
-
-    // 清空当前目录内容
-    dockContent.innerHTML = "";
-
-    // 只选择用户的问题，过滤掉 ChatGPT 的回答
-    let conversations = [];
-
-    // 首先尝试使用 ChatGPT 特定的选择器，只选择用户消息
-    const userMessageSelector = 'data-message-author-role="user"';
-    const userElements = document.querySelectorAll(userMessageSelector);
-
-    if (userElements.length > 0) {
-      console.log(`ChatGPT 侧边栏助手: 找到 ${userElements.length} 个用户问题`);
-      conversations = Array.from(userElements);
-    } else {
-      // TODO 备用方案：查找所有对话项，然后过滤出用户消息
-      const allItems = document.querySelectorAll(".agent-chat__list__item");
-      if (allItems.length > 0) {
-        conversations = Array.from(allItems).filter((item) => {
-          // 检查是否是用户消息
-          return (
-            item.classList.contains("agent-chat__list__item--human") ||
-            item.getAttribute("data-conv-speaker") === "human" ||
-            // 排除AI消息
-            (!item.classList.contains("agent-chat__list__item--ai") &&
-              item.getAttribute("data-conv-speaker") !== "ai")
-          );
-        });
-        console.log(
-          `元宝助手: 从 ${allItems.length} 个对话项中过滤出 ${conversations.length} 个用户问题`
-        );
-      } else {
-        // 最后的备用方案：使用通用选择器
-        console.log("元宝助手: 使用备用选择器查找对话");
-        const selectors = [
-          ".hyc-content-text",
-          ".conversation-item",
-          ".chat-message",
-          ".message-item",
-          '[class*="message"]',
-          '[class*="conversation"]',
-          '[class*="chat"]',
-        ];
-
-        for (const selector of selectors) {
-          const elements = document.querySelectorAll(selector);
-          if (elements.length > 0) {
-            conversations = Array.from(elements).filter((el) => {
-              const text = el.textContent.trim();
-              const rect = el.getBoundingClientRect();
-              return text.length > 20 && rect.width > 200 && rect.height > 30;
-            });
-            if (conversations.length > 0) {
-              console.log(
-                `元宝助手: 使用选择器 ${selector} 找到 ${conversations.length} 个元素`
-              );
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    // 去重，避免重复的对话项
-    conversations = conversations.filter(
-      (item, index, self) => self.indexOf(item) === index
+  initDOMObserver() {
+    const observer = new MutationObserver(
+      this.debounce(() => {
+        this.ensureElements();
+      }, 500)
     );
-
-    console.log(`ChatGPT 侧边栏助手: 处理 ${conversations.length} 个对话元素`);
-
-    if (conversations.length === 0) {
-      const noConversationsMsg = document.createElement("div");
-      noConversationsMsg.className = "chatgpt-no-conversations";
-      noConversationsMsg.innerHTML = `
-        <div>未检测到对话内容</div>
-        <div>
-          请确认您在 ChatGPT 对话页面，<br>
-          或点击刷新按钮重试
-        </div>
-      `;
-      dockContent.appendChild(noConversationsMsg);
-      return;
-    }
-
-    conversations.forEach((conversation, index) => {
-      try {
-        const tocItem = document.createElement("div");
-        tocItem.className = "chatgpt-toc-item";
-
-        // 使用 ChatGPT 的唯一ID作为星标的key，但不依赖它来匹配目录项
-        const conversationId =
-          conversation.getAttribute("data-conv-id") || `conversation-${index}`;
-
-        // 添加星标图标
-        const starIcon = document.createElement("span");
-        starIcon.className = "chatgpt-star-icon";
-        starIcon.innerHTML = settings.starredItems[conversationId] ? "★" : "☆";
-        if (settings.starredItems[conversationId]) {
-          starIcon.classList.add("starred");
-        }
-
-        starIcon.addEventListener("click", function (e) {
-          e.stopPropagation();
-          const isStarred = this.classList.toggle("starred");
-          this.innerHTML = isStarred ? "★" : "☆";
-
-          const newStarredItems = { ...settings.starredItems };
-          if (isStarred) {
-            newStarredItems[conversationId] = true;
-          } else {
-            delete newStarredItems[conversationId];
-          }
-          saveSettings("starredItems", newStarredItems);
-
-          if (settings.showOnlyStarred) {
-            applyStarFilter();
-          }
-        });
-
-        // 提取对话内容文本
-        const itemText = extractConversationText(conversation, index);
-
-        const textSpan = document.createElement("span");
-        textSpan.className = "chatgpt-toc-item-text";
-        textSpan.textContent = itemText;
-
-        tocItem.appendChild(starIcon);
-        tocItem.appendChild(textSpan);
-
-        // 添加点击事件
-        tocItem.addEventListener("click", () => {
-          conversation.scrollIntoView({ behavior: "smooth", block: "start" });
-        });
-
-        dockContent.appendChild(tocItem);
-
-        console.log(
-          `ChatGPT 侧边栏助手: 创建目录项 ${index}: ${itemText.substring(
-            0,
-            20
-          )}...`
-        );
-      } catch (error) {
-        console.error("ChatGPT 侧边栏助手: 处理对话元素时出错", error);
-      }
-    });
-
-    // 应用星标过滤
-    if (settings.showOnlyStarred) {
-      applyStarFilter();
-    }
-
-    console.log(
-      `ChatGPT 侧边栏助手: 成功创建 ${dockContent.children.length} 个目录项`
-    );
-  }
-
-  // 提取对话内容文本
-  function extractConversationText(conversation, index) {
-    try {
-      let itemText = "";
-
-      // ChatGPT 特定的文本提取选择器，按优先级排序
-      const selectors = [
-        // ChatGPT 特定的文本内容
-        ".whitespace-pre-wrap",
-        // 对话气泡内容
-        // ".agent-chat__bubble__content",
-        // 其他可能的类名
-        // '[class*="hyc-content"]',
-        // '[class*="agent-chat__bubble"]',
-        // 备用选择器
-        ".question-content",
-        ".user-message",
-        ".query",
-        '[class*="user"]',
-        '[class*="question"]',
-        "h1, h2, h3, h4, h5, h6",
-        "p",
-        ".markdown-body",
-        "div > strong",
-        "div > b",
-      ];
-
-      // 尝试使用特定选择器提取文本
-      for (const selector of selectors) {
-        const element = conversation.querySelector(selector);
-        if (element) {
-          itemText = element.textContent.trim();
-          if (itemText.length > 0) {
-            console.log(
-              `ChatGPT 侧边栏助手: 使用选择器 ${selector} 提取到文本: ${itemText.substring(
-                0,
-                30
-              )}...`
-            );
-            break;
-          }
-        }
-      }
-
-      // 如果没有找到特定元素，使用整个对话容器的文本
-      if (!itemText) {
-        itemText = conversation.textContent.trim();
-        console.log(
-          `ChatGPT 侧边栏助手: 使用整个容器文本: ${itemText.substring(
-            0,
-            30
-          )}...`
-        );
-      }
-
-      // 清理文本
-      itemText = itemText
-        .replace(/\s+/g, " ") // 替换多个空白字符为单个空格
-        .replace(/^[^a-zA-Z\u4e00-\u9fa5]+/, "") // 移除开头的非字母和非中文字符
-        .trim();
-
-      // 截断过长的文本
-      if (itemText.length > 60) {
-        itemText = itemText.substring(0, 57) + "...";
-      } else if (itemText.length === 0) {
-        itemText = `对话 ${index + 1}`;
-      }
-
-      return itemText;
-    } catch (error) {
-      console.error("ChatGPT 侧边栏助手: 提取对话文本时出错", error);
-      return `对话 ${index + 1}`;
-    }
-  }
-
-  // TODO 应用星标过滤
-  function applyStarFilter() {
-    const allItems = dockContent.querySelectorAll(".chatgpt-toc-item");
-    const conversations = document.querySelectorAll(
-      ".agent-chat__list__item--human"
-    );
-
-    allItems.forEach((item, index) => {
-      // 获取对应对话的ID
-      const conversation = conversations[index];
-      if (conversation) {
-        const conversationId =
-          conversation.getAttribute("data-conv-id") || `conversation-${index}`;
-        const isStarred = settings.starredItems[conversationId];
-
-        if (settings.showOnlyStarred && !isStarred) {
-          item.style.display = "none";
-        } else {
-          item.style.display = "";
-        }
-      }
-    });
-  }
-
-  // TODO 设置 MutationObserver 监听页面变化
-  function setupMutationObserver() {
-    const observer = new MutationObserver((mutations) => {
-      if (!settings.isVisible) return;
-
-      let hasNewConversations = false;
-
-      for (const mutation of mutations) {
-        if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-          for (const node of mutation.addedNodes) {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              // 检查是否有新的用户问题（只关注用户消息，不关注AI回答）
-              if (
-                node.querySelector(
-                  '.agent-chat__list__item--human, [data-conv-speaker="human"]'
-                ) ||
-                node.classList.contains("agent-chat__list__item--human") ||
-                node.getAttribute("data-conv-speaker") === "human" ||
-                // 检查是否包含用户问题的文本内容
-                (node.querySelector(".hyc-content-text") &&
-                  !node.querySelector(".agent-chat__list__item--ai") &&
-                  !node.querySelector('[data-conv-speaker="ai"]')) ||
-                // 备用检查（排除明确的AI消息）
-                (node.querySelector(
-                  '.conversation-item, .chat-message, .message-item, [class*="message"], [class*="conversation"]'
-                ) &&
-                  !node.className.includes("ai") &&
-                  !node.className.includes("assistant"))
-              ) {
-                hasNewConversations = true;
-                console.log("元宝助手: 检测到新的用户问题");
-                break;
-              }
-            }
-          }
-        }
-
-        if (hasNewConversations) break;
-      }
-
-      if (hasNewConversations) {
-        debounce(scanPageForConversations, 500)();
-      }
-    });
 
     observer.observe(document.body, {
       childList: true,
@@ -672,174 +129,884 @@
     });
   }
 
-  // 辅助函数：防抖
-  function debounce(func, wait) {
+  ensureElements() {
+    if (window.location.href !== this.currentURL) {
+      this.currentURL = window.location.href;
+      this.handleConversationSwitch();
+    }
+
+    // 确保侧边栏存在
+    if (this.sidebar && !document.body.contains(this.sidebar)) {
+      const mainContainer = this.findMainContainer();
+      if (mainContainer) {
+        this.insertSidebar(mainContainer);
+      }
+    }
+
+    // 确保目录按钮存在
+    const header = document.getElementById("conversation-header-actions");
+    if (header && !header.querySelector(".directory-toggle-btn")) {
+      const button = document.createElement("button");
+      button.textContent = chrome.i18n.getMessage("toggleButton");
+      button.className =
+        "directory-toggle-btn btn relative btn-ghost text-token-text-primary mx-2";
+      button.addEventListener("click", () => this.toggleSidebar());
+      header.prepend(button);
+    }
+  }
+
+  async handleConversationSwitch() {
+    this.questions = [];
+    this.renderQuestions();
+    await this.loadQuestions();
+    this.waitForContentAndExtract();
+  }
+
+  waitForContentAndExtract() {
+    const maxRetries = 10;
+    let retryCount = 0;
+
+    const intervalId = setInterval(() => {
+      // Use a selector that indicates the chat is loaded.
+      const chatLoadedIndicator = document.querySelector(
+        '[class*="hyc-content-text"], [class*="whitespace-pre-wrap"]'
+      );
+
+      if (chatLoadedIndicator) {
+        clearInterval(intervalId);
+        console.log("对话内容已加载，自动提取问题...");
+        this.extractQuestionsFromPage(false); // false for silent extraction
+      } else {
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          clearInterval(intervalId);
+          console.log("等待对话内容超时，未自动提取问题。");
+        }
+      }
+    }, 1000); // Check every second
+  }
+
+  debounce(func, wait) {
     let timeout;
-    return function () {
+    return function (...args) {
       const context = this;
-      const args = arguments;
       clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        func.apply(context, args);
-      }, wait);
+      timeout = setTimeout(() => func.apply(context, args), wait);
     };
   }
 
-  // 检测ChatGPT Web版页面
-  function isChatGPTWebPage() {
-    const isChatGPTURL = window.location.hostname === "chatgpt.com";
-    // const hasChatGPTContent =
-    //   document.body.textContent.includes("ChatGPT") ||
-    //   document.title.includes("ChatGPT");
-    // const hasChatGPTElements =
-    //   document.querySelector(
-    //     '[class*="yuanbao"], [id*="yuanbao"], [class*="chat"], [class*="conversation"]'
-    //   ) !== null;
+  /**
+   * 查找合适的主容器
+   */
+  findMainContainer() {
+    // 尝试多种选择器来找到主容器
+    const selectors = [
+      '[class*="main"]',
+      '[class*="container"]',
+      '[class*="layout"]',
+      '[class*="content"]',
+      "main",
+      "#app > div",
+      "body > div:first-child",
+    ];
 
-    const result = isChatGPTURL;
-    // const result = isChatGPTURL && (hasYuanbaoContent || hasYuanbaoElements);
-    console.log(`ChatGPT 侧边栏助手: 页面检测结果 = ${result}`, {
-      isChatGPTURL,
-      // hasYuanbaoContent,
-      // hasYuanbaoElements,
-      url: window.location.href,
-      title: document.title,
-    });
+    for (const selector of selectors) {
+      const container = document.querySelector(selector);
+      if (container && container.offsetWidth > 800) {
+        return container;
+      }
+    }
 
-    return result;
+    // 如果都没找到，使用body
+    return document.body;
   }
 
-  // 当页面加载完成后初始化
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => {
-      setTimeout(() => {
-        if (isChatGPTWebPage()) {
-          init();
-        }
-      }, 1000);
+  /**
+   * 插入侧边栏到主容器
+   */
+  insertSidebar(mainContainer) {
+    // 确保主容器使用flex布局
+    const computedStyle = window.getComputedStyle(mainContainer);
+    if (computedStyle.display !== "flex") {
+      mainContainer.style.display = "flex";
+    }
+
+    // 插入侧边栏
+    mainContainer.appendChild(this.sidebar);
+
+    // 调整主容器的其他子元素
+    const otherChildren = Array.from(mainContainer.children).filter(
+      (child) => child !== this.sidebar
+    );
+
+    otherChildren.forEach((child) => {
+      if (!child.style.flex) {
+        child.style.flex = "1";
+      }
     });
-  } else {
+  }
+
+  /**
+   * 绑定事件监听器
+   */
+  bindEvents() {
+    // 切换展开/收起
+    const toggleBtn = this.sidebar.querySelector(".sidebar-toggle");
+    toggleBtn.addEventListener("click", () => this.toggleSidebar());
+
+    // “只显示星标”筛选
+    const starFilterCheckbox = this.sidebar.querySelector(
+      ".star-filter-checkbox"
+    );
+    starFilterCheckbox.addEventListener("change", () => {
+      this.renderQuestions();
+      chrome.storage.local.set({
+        chatgpt_show_only_starred: starFilterCheckbox.checked,
+      });
+    });
+
+    // 监听问题列表点击（事件委托）
+    const questionsList = this.sidebar.querySelector("#questions-list");
+    questionsList.addEventListener("click", (e) => {
+      const questionItem = e.target.closest(".question-item");
+      if (!questionItem) return;
+
+      const actionBtn = e.target.closest(".action-btn");
+      if (!actionBtn) {
+        // 点击问题本身，滚动到对应位置
+        const domId = questionItem.dataset.domId;
+        this.scrollToQuestion(domId);
+        return;
+      }
+
+      const questionId = questionItem.dataset.id;
+      const action = actionBtn.dataset.action;
+
+      switch (action) {
+        case "star":
+          this.toggleStar(questionId);
+          break;
+        case "copy":
+        case "reuse":
+        case "delete":
+          this.handleQuestionAction(action, questionId);
+          break;
+      }
+    });
+  }
+
+  handleQuestionAction(action, questionId) {
+    const question = this.questions.find((q) => q.id === questionId);
+    if (!question) return;
+
+    switch (action) {
+      case "copy":
+        this.copyQuestion(question.text);
+        break;
+      case "reuse":
+        this.reuseQuestion(question.text);
+        break;
+      case "delete":
+        this.deleteQuestion(questionId);
+        break;
+    }
+  }
+
+  async toggleStar(questionId) {
+    const question = this.questions.find((q) => q.id === questionId);
+    if (!question) return;
+
+    question.isStarred = !question.isStarred;
+    await this.saveQuestions();
+
+    const showOnlyStarred = this.sidebar.querySelector(
+      ".star-filter-checkbox"
+    )?.checked;
+
+    // 如果在“只显示星标”模式下取消星标，则需要重绘以移除该项
+    if (showOnlyStarred && !question.isStarred) {
+      this.renderQuestions();
+    } else {
+      // 否则，只更新DOM元素以避免闪烁
+      const questionItem = this.sidebar.querySelector(
+        `.question-item[data-id="${questionId}"]`
+      );
+      if (questionItem) {
+        const starBtn = questionItem.querySelector(".star-btn");
+        if (starBtn) {
+          starBtn.classList.toggle("starred", question.isStarred);
+          starBtn.title = question.isStarred
+            ? chrome.i18n.getMessage("removeStarTitle")
+            : chrome.i18n.getMessage("addStarTitle");
+          starBtn.innerHTML = question.isStarred ? "★" : "☆";
+        }
+      }
+    }
+  }
+
+  /**
+   * 切换侧边栏展开/收起状态
+   */
+  toggleSidebar() {
+    this.isCollapsed = !this.isCollapsed;
+    this.sidebar.classList.toggle("collapsed", this.isCollapsed);
+
+    const toggleIcon = this.sidebar.querySelector(".toggle-icon");
+    toggleIcon.textContent = this.isCollapsed ? "▶" : "◀";
+
+    // 保存状态
+    chrome.storage.local.set({ sidebar_collapsed: this.isCollapsed });
+  }
+
+  /**
+   * 开始监听页面变化
+   */
+  startObserving() {
+    // 监听DOM变化，检测新的用户消息
+    this.observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === "childList") {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              this.checkForNewQuestions(node);
+            }
+          });
+        }
+      });
+    });
+
+    // 开始观察
+    this.observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    // 也监听输入框的提交事件
+    this.monitorInputSubmission();
+  }
+
+  /**
+   * 监听输入框提交
+   */
+  monitorInputSubmission() {
+    // 监听可能的提交按钮点击
+    document.addEventListener("click", (e) => {
+      const target = e.target;
+      if (this.isSubmitButton(target)) {
+        setTimeout(() => this.extractLatestQuestion(), 500);
+      }
+    });
+
+    // 监听回车键提交
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        const target = e.target;
+        if (this.isInputElement(target)) {
+          setTimeout(() => this.extractLatestQuestion(), 500);
+        }
+      }
+    });
+  }
+
+  /**
+   * 判断是否为提交按钮
+   */
+  isSubmitButton(element) {
+    if (!element) return false;
+
+    const buttonSelectors = [
+      'button[type="submit"]',
+      '[class*="send"]',
+      '[class*="submit"]',
+      '[title*="发送"]',
+      '[aria-label*="发送"]',
+      '[data-testid*="send"]',
+      '[class*="icon-send"]',
+    ];
+
+    for (const selector of buttonSelectors) {
+      if (element.matches && element.matches(selector)) {
+        return true;
+      }
+    }
+
+    // Check parents for button-like behavior
+    let parent = element.parentElement;
+    for (let i = 0; i < 3 && parent; i++) {
+      for (const selector of buttonSelectors) {
+        if (parent.matches && parent.matches(selector)) {
+          return true;
+        }
+      }
+      parent = parent.parentElement;
+    }
+
+    return false;
+  }
+
+  /**
+   * 判断是否为输入元素
+   */
+  isInputElement(element) {
+    if (!element) return false;
+
+    return (
+      element.tagName === "TEXTAREA" ||
+      element.tagName === "INPUT" ||
+      element.contentEditable === "true"
+    );
+  }
+
+  /**
+   * 检查新添加的节点是否包含用户问题
+   */
+  checkForNewQuestions(node) {
+    // 查找可能包含用户消息的元素
+    const messageSelectors = [
+      '[class*="whitespace-pre-wrap"]',
+      '[class*="user"]',
+      '[class*="message"]',
+      '[class*="question"]',
+      '[class*="query"]',
+      '[class*="prompt"]',
+      '[data-role="user"]',
+      '[data-from="user"]',
+      '[data-testid*="user-message"]',
+    ];
+
+    messageSelectors.forEach((selector) => {
+      const messages = node.querySelectorAll
+        ? node.querySelectorAll(selector)
+        : [];
+
+      messages.forEach((msg) => this.extractQuestionFromElement(msg));
+    });
+  }
+
+  /**
+   * 提取最新的问题
+   */
+  extractLatestQuestion() {
+    // 尝试从输入框获取刚提交的内容
+    const inputElements = document.querySelectorAll(
+      'textarea, input[type="text"], [contenteditable="true"]'
+    );
+
+    for (const input of inputElements) {
+      const value = input.value || input.textContent || input.innerText;
+      if (value && value.trim() && value.trim().length > 0) {
+        this.addQuestion(value.trim());
+        // Clear the input after capturing, if possible and desired
+        // if (input.value) input.value = '';
+        // else if (input.textContent) input.textContent = '';
+        break;
+      }
+    }
+
+    // 也尝试从页面上最新的用户消息元素获取
+    setTimeout(() => this.extractQuestionsFromPage(true), 1000);
+  }
+
+  /**
+   * 从页面提取所有用户问题
+   * @param {boolean} isManual - 是否为手动触发
+   */
+  extractQuestionsFromPage(isManual = false) {
+    const messageSelectors = [
+      '[class*="hyc-content-text"]',
+      '[class*="whitespace-pre-wrap"]',
+      // '[class*="user-message"]',
+      // '[class*="human-message"]',
+      // '[class*="user"]',
+      // '[class*="human"]',
+      // '[data-role="user"]',
+      // '[data-from="user"]',
+      // '[class*="question"]',
+      // '[class*="query"]',
+      // '[class*="prompt"]',
+      // '[data-testid*="user-message"]',
+    ];
+
+    const foundQuestions = new Set();
+    let newQuestionsCount = 0;
+
+    messageSelectors.forEach((selector) => {
+      const messages = document.querySelectorAll(selector);
+      Array.from(messages).forEach((msg) => {
+        const questionData = this.extractQuestionFromElement(msg);
+
+        if (
+          questionData &&
+          !this.questions.some((q) => q.text === questionData.text)
+        ) {
+          // 如果提取到有效问题，并且未被记录过，则添加到问题列表里
+          if (this.addQuestion(questionData.text, questionData.domId)) {
+            newQuestionsCount++;
+          }
+        } else if (
+          questionData &&
+          this.questions.some((q) => q.text === questionData.text && !q.domId)
+        ) {
+          // 如果问题已存在但没有domId，则更新它
+          const existingQuestion = this.questions.find(
+            (q) => q.text === questionData.text
+          );
+          if (existingQuestion) {
+            existingQuestion.domId = questionData.domId;
+            this.saveQuestions();
+          }
+        }
+      });
+    });
+
+    if (isManual) {
+      if (newQuestionsCount > 0) {
+        this.showToast(`成功提取了 ${newQuestionsCount} 个新问题`);
+      } else {
+        this.showToast("未在当前页面上发现新的问题");
+      }
+    }
+  }
+
+  /**
+   * 从DOM元素提取问题文本
+   */
+  extractQuestionFromElement(element) {
+    if (!element || element.closest(".yuanbao-sidebar")) return null; // 忽略侧边栏内的内容
+
+    // 如果元素没有ID，则分配一个
+    if (!element.id) {
+      element.id = this.generateUniqueId();
+    }
+    const domId = element.id;
+
+    // 尝试多种方式提取文本
+    const textSelectors = [
+      ".text-content",
+      ".message-text",
+      ".content",
+      "p",
+      "span",
+      "div",
+      "pre",
+      "code",
+    ];
+
+    for (const selector of textSelectors) {
+      const textEl = element.querySelector(selector);
+      if (textEl) {
+        const text = (textEl.textContent || textEl.innerText || "").trim();
+        if (text && text.length > 0 && text.length < 500) {
+          return { text, domId };
+        }
+      }
+    }
+
+    // 如果没有找到子元素，直接使用元素本身的文本
+    const text = (element.textContent || element.innerText || "").trim();
+    if (text && text.length > 0 && text.length < 500) {
+      return { text, domId };
+    }
+
+    return null;
+  }
+
+  /**
+   * 添加新问题
+   * @param {string} questionText
+   * @param {string | null} domId
+   * @returns {boolean} - 是否成功添加了新问题
+   */
+  async addQuestion(questionText, domId = null) {
+    if (!questionText || questionText.trim().length === 0) return false;
+
+    const trimmedText = questionText.trim();
+
+    // 避免重复添加
+    if (this.questions.some((q) => q.text === trimmedText)) {
+      // 如果问题已存在，但domId没有，则更新
+      const existingQuestion = this.questions.find(
+        (q) => q.text === trimmedText
+      );
+      if (existingQuestion && !existingQuestion.domId && domId) {
+        existingQuestion.domId = domId;
+        await this.saveQuestions();
+        this.renderQuestions(); // 更新UI以包含domId
+      }
+      return false;
+    }
+
+    const question = {
+      id: domId,
+      text: trimmedText,
+      timestamp: new Date().toLocaleString("zh-CN"),
+      domId: domId,
+      isStarred: false, // 添加星标属性
+    };
+
+    this.questions.push(question);
+
+    // 限制历史记录数量
+    if (this.questions.length > 50) {
+      this.questions = this.questions.slice(-50); // 保留最新的50条
+    }
+
+    await this.saveQuestions();
+    this.renderQuestions();
+
+    // console.log("新问题已添加:", question.text);
+    return true;
+  }
+
+  /**
+   * 渲染问题列表
+   */
+  renderQuestions() {
+    const questionsList = this.sidebar.querySelector("#questions-list");
+    const showOnlyStarred =
+      this.sidebar.querySelector(".star-filter-checkbox")?.checked || false;
+
+    const questionsToRender = showOnlyStarred
+      ? this.questions.filter((q) => q.isStarred)
+      : this.questions;
+
+    if (questionsToRender.length === 0) {
+      questionsList.innerHTML = `
+        <div class="empty-state">
+          <p>${
+            showOnlyStarred
+              ? chrome.i18n.getMessage("emptyStateStarredHeader")
+              : chrome.i18n.getMessage("emptyStateHeader")
+          }</p>
+          <small>${
+            showOnlyStarred
+              ? chrome.i18n.getMessage("emptyStateStarredDescription")
+              : chrome.i18n.getMessage("emptyStateDescription")
+          }</small>
+        </div>
+      `;
+      return;
+    }
+
+    questionsList.innerHTML = questionsToRender
+      .map(
+        (question) => `
+      <div class="question-item" data-id="${question.id}" ${
+          question.domId ? `data-dom-id="${question.domId}"` : ""
+        } title="${chrome.i18n.getMessage("scrollToConversationTitle")}">
+        <div class="question-content-wrapper space-between">
+          <div class="question-text">
+            ${this.escapeHtml(question.text)}
+          </div>
+          <div class="flex-column">
+           <button class="action-btn star-btn ${
+             question.isStarred ? "starred" : ""
+           }" title="${
+          question.isStarred
+            ? chrome.i18n.getMessage("removeStarTitle")
+            : chrome.i18n.getMessage("addStarTitle")
+        }" data-action="star">
+             ${question.isStarred ? "★" : "☆"}
+           </button>
+           <button class="action-btn copy-btn" title="复制对话" data-action="copy">
+              📋
+            </button>
+            </div>
+         </div>
+        </div>
+    `
+      )
+      .join("");
+    // <div class="question-meta">
+    //       <div class="question-actions">
+    //         <button class="action-btn copy-btn" title="复制对话" data-action="copy">
+    //           📋
+    //         </button>
+    //         <button class="action-btn reuse-btn" title="重新提问" data-action="reuse">
+    //           🔄
+    //         </button>
+    //         <button class="action-btn delete-btn" title="删除" data-action="delete">
+    //           ❌
+    //         </button>
+    //       </div>
+    //     </div>
+    // 绑定问题项事件 (事件委托已移至bindEvents)
+    // this.bindQuestionEvents();
+  }
+
+  /**
+   * 绑定问题项的事件
+   */
+  bindQuestionEvents() {
+    // 此方法的内容已移至 bindEvents 中，使用事件委托实现
+    // 保留此空方法以避免破坏现有调用结构，或在未来用于其他目的
+  }
+
+  /**
+   * 滚动到指定问题
+   * @param {string} domId
+   */
+  scrollToQuestion(domId) {
+    if (!domId) {
+      this.showToast("该问题在当前页面没有对应的位置");
+      return;
+    }
+
+    const element = document.getElementById(domId);
+
+    // console.log('🚀 ~ scrollToQuestion domId', domId)
+    if (element) {
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      // 添加高亮效果
+      element.style.transition = "background-color 0.3s ease";
+      element.style.backgroundColor = "rgba(255, 255, 0, 0.5)";
+      setTimeout(() => {
+        element.style.backgroundColor = "";
+      }, 1500);
+    } else {
+      this.showToast("无法在当前页面找到该问题的位置");
+    }
+  }
+
+  /**
+   * 复制问题到剪贴板
+   */
+  async copyQuestion(questionText) {
+    try {
+      await navigator.clipboard.writeText(questionText);
+      this.showToast("问题已复制到剪贴板");
+    } catch (err) {
+      // 降级方案
+      const textArea = document.createElement("textarea");
+      textArea.value = questionText;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      this.showToast("问题已复制到剪贴板");
+    }
+  }
+
+  /**
+   * 重新使用问题（填入输入框）
+   */
+  reuseQuestion(questionText) {
+    // 查找输入框
+    const inputSelectors = [
+      "textarea",
+      'input[type="text"]',
+      '[contenteditable="true"]',
+    ];
+
+    for (const selector of inputSelectors) {
+      const input = document.querySelector(selector);
+      if (input && input.offsetParent !== null) {
+        // 确保元素可见
+        if (input.tagName === "TEXTAREA" || input.tagName === "INPUT") {
+          input.value = questionText;
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        } else if (input.contentEditable === "true") {
+          input.textContent = questionText;
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+
+        input.focus();
+        this.showToast("问题已填入输入框");
+        return;
+      }
+    }
+
+    this.showToast("未找到输入框");
+  }
+
+  /**
+   * 删除问题
+   */
+  async deleteQuestion(questionId) {
+    this.questions = this.questions.filter((q) => q.id !== questionId);
+    await this.saveQuestions();
+    this.renderQuestions();
+    this.showToast("问题已删除");
+  }
+
+  /**
+   * 清空历史记录
+   */
+  async clearHistory() {
+    if (confirm("确定要清空所有历史记录吗？")) {
+      this.questions = [];
+      await this.saveQuestions();
+      this.renderQuestions();
+      this.showToast("历史记录已清空");
+    }
+  }
+
+  /**
+   * 显示提示消息
+   */
+  showToast(message) {
+    // 创建toast元素
+    const toast = document.createElement("div");
+    toast.className = "yuanbao-toast";
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    // 显示动画
+    setTimeout(() => toast.classList.add("show"), 100);
+
+    // 自动隐藏
     setTimeout(() => {
-      if (isChatGPTWebPage()) {
-        init();
-      }
-    }, 1000);
+      toast.classList.remove("show");
+      setTimeout(() => document.body.removeChild(toast), 300);
+    }, 2000);
   }
 
-  // 监听URL变化，以便在SPA应用中重新初始化
-  let lastUrl = location.href;
-  new MutationObserver(() => {
-    const url = location.href;
-    if (url !== lastUrl) {
-      lastUrl = url;
-      setTimeout(() => {
-        if (isChatGPTWebPage()) {
-          // 如果组件已存在，先移除
-          if (toggleButton) {
-            document.body.removeChild(toggleButton);
-            toggleButton = null;
-          }
-          if (dockWindow) {
-            document.body.removeChild(dockWindow);
-            dockWindow = null;
-          }
-          // 重置body样式
-          document.body.classList.remove("yuanbao-dock-active");
-          document.body.style.marginRight = "";
+  /**
+   * 转义HTML
+   */
+  escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
 
-          init();
+  /**
+   * 加载侧边栏设置（宽度和折叠状态）
+   */
+  async loadSidebarSettings() {
+    try {
+      const result = await chrome.storage.local.get([
+        "sidebar_collapsed",
+        "chatgpt_sidebar_width",
+        "chatgpt_show_only_starred",
+      ]);
+      this.isCollapsed = result.sidebar_collapsed || false;
+      const savedWidth = result.chatgpt_sidebar_width;
+      const showOnlyStarred = result.chatgpt_show_only_starred || false;
+
+      if (this.sidebar) {
+        if (this.isCollapsed) {
+          this.sidebar.classList.add("collapsed");
+          const toggleIcon = this.sidebar.querySelector(".toggle-icon");
+          if (toggleIcon) toggleIcon.textContent = "▶";
         }
-      }, 1000);
-    }
-  }).observe(document, { subtree: true, childList: true });
-
-  // 监听来自popup的消息
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log("收到消息:", message);
-
-    switch (message.action) {
-      case "toggleDock":
-        toggleDock();
-        sendResponse({ success: true });
-        break;
-
-      case "toggleStarredFilter":
-        toggleStarredFilter();
-        sendResponse({ success: true });
-        break;
-
-      case "clearAllStars":
-        clearAllStars();
-        sendResponse({ success: true });
-        break;
-
-      case "getStats":
-        const stats = getConversationStats();
-        sendResponse(stats);
-        break;
-
-      default:
-        sendResponse({ success: false, error: "Unknown action" });
-    }
-
-    return true; // 保持消息通道开放
-  });
-
-  // 切换星标筛选
-  function toggleStarredFilter() {
-    const dock = document.querySelector(".yuanbao-dock");
-    if (!dock) return;
-
-    const checkbox = dock.querySelector(
-      '.yuanbao-star-filter input[type="checkbox"]'
-    );
-    if (checkbox) {
-      checkbox.checked = !checkbox.checked;
-      checkbox.dispatchEvent(new Event("change"));
-    }
-  }
-
-  // 清除所有星标
-  function clearAllStars() {
-    const dock = document.querySelector(".yuanbao-dock");
-    if (!dock) return;
-
-    // 清除所有星标标记
-    const starredItems = dock.querySelectorAll(".yuanbao-star-icon.starred");
-    starredItems.forEach((star) => {
-      star.classList.remove("starred");
-      star.textContent = "☆";
-    });
-
-    // 清除存储的星标数据
-    saveSettings("starredItems", {});
-
-    // 如果当前是筛选模式，刷新显示
-    const checkbox = dock.querySelector(
-      '.yuanbao-star-filter input[type="checkbox"]'
-    );
-    if (checkbox && checkbox.checked) {
-      checkbox.dispatchEvent(new Event("change"));
-    }
-
-    console.log("已清除所有星标");
-  }
-
-  // 获取对话统计信息
-  function getConversationStats() {
-    const items = document.querySelectorAll(".agent-chat__list__item--human");
-    let starredCount = 0;
-
-    items.forEach((item) => {
-      const conversationId = item.getAttribute("data-conv-id");
-      if (conversationId && settings.starredItems[conversationId]) {
-        starredCount++;
+        if (savedWidth) {
+          this.sidebar.style.width = `${savedWidth}px`;
+        }
+        const starFilterCheckbox = this.sidebar.querySelector(
+          ".star-filter-checkbox"
+        );
+        if (starFilterCheckbox) {
+          starFilterCheckbox.checked = showOnlyStarred;
+        }
       }
-    });
-
-    return {
-      totalConversations: items.length,
-      starredConversations: starredCount,
-    };
+    } catch (err) {
+      console.warn("加载侧边栏设置失败:", err);
+    }
   }
-})();
+
+  /**
+   * 加载历史问题
+   */
+  async loadQuestions() {
+    const conversationId = this.getConversationId();
+    if (!conversationId) {
+      this.questions = [];
+      this.renderQuestions();
+      return;
+    }
+    const storageKey = `chatgpt_history_${conversationId}`;
+
+    try {
+      const result = await chrome.storage.local.get([storageKey]);
+      this.questions = result[storageKey] || [];
+      this.renderQuestions();
+    } catch (err) {
+      console.warn("加载历史记录失败:", err);
+      this.questions = [];
+    }
+  }
+
+  /**
+   * 保存问题到存储
+   */
+  async saveQuestions() {
+    const conversationId = this.getConversationId();
+    if (!conversationId) {
+      return; // Don't save if not in a conversation
+    }
+    const storageKey = `chatgpt_history_${conversationId}`;
+
+    try {
+      await chrome.storage.local.set({
+        [storageKey]: this.questions,
+      });
+    } catch (err) {
+      console.warn("保存历史记录失败:", err);
+    }
+  }
+
+  getConversationId() {
+    const match = window.location.href.match(/\/c\/([a-zA-Z0-9-]+)/);
+    return match ? match[1] : null;
+  }
+
+  /**
+   * 设置调整大小功能
+   */
+  setupResizing() {
+    const resizer = this.sidebar.querySelector(".sidebar-resizer");
+    if (!resizer) {
+      return;
+    }
+
+    const handleMouseMove = (e) => {
+      if (!this.isResizing) return;
+      const deltaX = startX - e.clientX;
+      const newWidth = startWidth + deltaX;
+
+      if (newWidth >= 250 && newWidth <= 800) {
+        this.sidebar.style.width = newWidth + "px";
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (!this.isResizing) return;
+      this.isResizing = false;
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+
+      this.sidebar.classList.remove("resizing");
+      document.body.classList.remove("chatgpt-dock-resizing");
+
+      const finalWidth = parseInt(this.sidebar.style.width, 10);
+      if (!isNaN(finalWidth)) {
+        chrome.storage.local.set({ chatgpt_sidebar_width: finalWidth });
+      }
+    };
+
+    let startX, startWidth;
+    resizer.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      this.isResizing = true;
+      startX = e.clientX;
+      startWidth = parseInt(window.getComputedStyle(this.sidebar).width, 10);
+
+      this.sidebar.classList.add("resizing");
+      document.body.classList.add("chatgpt-dock-resizing");
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    });
+  }
+}
+
+// 初始化侧边栏
+if (typeof window !== "undefined") {
+  new ChatGPTSidebar();
+}
