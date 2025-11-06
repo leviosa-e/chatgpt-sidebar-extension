@@ -25,11 +25,11 @@
 /* 暗色模式 (如果需要) */
 /* @media (prefers-color-scheme: dark) {
   :root {
-    --sidebar-bg-color: #2a2a2e;
+    --sidebar-bg-color: #303030;
     --sidebar-text-color: #d1d5db;
     --sidebar-border-color: #404043;
-    --sidebar-header-bg-color: #343541;
-    --sidebar-footer-bg-color: #343541;
+    --sidebar-header-bg-color: #303030;
+    --sidebar-footer-bg-color: #303030;
   }
 } */
 
@@ -408,18 +408,23 @@
 /* 暗色主题适配 */
 @media (prefers-color-scheme: dark) {
   .yuanbao-sidebar {
-    background: #1f2937;
+    background: #212121;
     border-left-color: #374151;
     color: #f9fafb;
   }
 
   .sidebar-header {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    background: #212121;
+    border-bottom-color: #ffffff0d;
+  }
+
+  .star-filter-label {
+    color: #f9fafb;
   }
 
   .question-item {
-    background: #374151;
-    border-color: #4b5563;
+    background: #212121;
+    border-color: #ffffff0d;
     color: #f9fafb;
   }
 
