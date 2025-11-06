@@ -1,6 +1,22 @@
 document.addEventListener("DOMContentLoaded", function () {
   const clearCacheBtn = document.getElementById("clear-cache-btn");
   const statusMessage = document.getElementById("status-message");
+  const userGuideBtn = document.getElementById("user-guide-btn");
+  const feedbackBtn = document.getElementById("feedback-btn");
+
+  if (userGuideBtn) {
+    userGuideBtn.addEventListener("click", function () {
+      chrome.tabs.create({
+        url: "https://github.com/leviosa-e/chatgpt-sidebar-extension",
+      });
+    });
+  }
+
+  if (feedbackBtn) {
+    feedbackBtn.addEventListener("click", function () {
+      window.open("mailto:zhoupeng.levi@gmail.com");
+    });
+  }
 
   if (clearCacheBtn) {
     clearCacheBtn.addEventListener("click", function () {

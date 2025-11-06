@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ChatGPT 侧边栏助手</title>
+    <title>ChatGPT 对话目录</title>
     <style>
       body {
         width: 300px;
@@ -56,6 +56,24 @@
         background: #dc2626;
       }
 
+      .btn-primary {
+        background: #10a37f;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #0f9671;
+      }
+
+      .btn-secondary {
+        background: #f1f5f9;
+        color: #1e293b;
+      }
+
+      .btn-secondary:hover {
+        background: #e2e8f0;
+      }
+
       .status-message {
         margin-top: 12px;
         font-size: 13px;
@@ -75,13 +93,16 @@
   </head>
   <body>
     <div class="header">
-      <h1>ChatGPT 侧边栏助手</h1>
+      <h1>ChatGPT 对话目录</h1>
     </div>
 
     <div class="content">
+      <p>管理你的会话历史，快速回顾、搜索和定位你的问题。</p>
       <div class="actions">
+        <button class="btn btn-primary" id="user-guide-btn">使用说明</button>
+        <button class="btn btn-secondary" id="feedback-btn">反馈建议</button>
         <button class="btn btn-danger" id="clear-cache-btn">
-          清除所有本地缓存
+          清除本地缓存
         </button>
         <p id="status-message" class="status-message">
           缓存已清除！请刷新页面。
