@@ -3,6 +3,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const statusMessage = document.getElementById("status-message");
   const userGuideBtn = document.getElementById("user-guide-btn");
   const feedbackBtn = document.getElementById("feedback-btn");
+  const contactAuthorBtn = document.getElementById("contact-author-btn");
+  const modal = document.getElementById("myModal");
+  const closeBtn = document.getElementsByClassName("close")[0];
 
   if (userGuideBtn) {
     userGuideBtn.addEventListener("click", function () {
@@ -14,7 +17,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (feedbackBtn) {
     feedbackBtn.addEventListener("click", function () {
-      window.open("mailto:zhoupeng.levi@gmail.com");
+      chrome.tabs.create({
+        url: "https://github.com/leviosa-e/chatgpt-sidebar-extension/issues/new",
+      });
     });
   }
 
@@ -41,4 +46,22 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     });
   }
+
+  if (contactAuthorBtn) {
+    contactAuthorBtn.addEventListener("click", function () {
+      modal.style.display = "block";
+    });
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", function () {
+      modal.style.display = "none";
+    });
+  }
+
+  window.addEventListener("click", function (event) {
+    if (event.target == modal) {
+      modal.style.display = "none";
+    }
+  });
 });
