@@ -351,8 +351,16 @@ class ChatGPTSidebar {
     this.isCollapsed = !this.isCollapsed;
     this.sidebar.classList.toggle("collapsed", this.isCollapsed);
 
+    if (this.isCollapsed) {
+      this.sidebar.style.display = "none";
+    } else {
+      this.sidebar.style.display = ""; // 或者恢复为 'flex' 等
+    }
+
     const toggleIcon = this.sidebar.querySelector(".toggle-icon");
-    toggleIcon.textContent = this.isCollapsed ? "▶" : "◀";
+    if (toggleIcon) {
+      toggleIcon.textContent = this.isCollapsed ? "▶" : "◀";
+    }
 
     // 保存状态
     chrome.storage.local.set({ sidebar_collapsed: this.isCollapsed });
@@ -892,6 +900,7 @@ class ChatGPTSidebar {
       if (this.sidebar) {
         if (this.isCollapsed) {
           this.sidebar.classList.add("collapsed");
+          this.sidebar.style.display = "none";
           const toggleIcon = this.sidebar.querySelector(".toggle-icon");
           if (toggleIcon) toggleIcon.textContent = "▶";
         }
