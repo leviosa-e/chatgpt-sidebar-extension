@@ -4,13 +4,23 @@
   "version": "1.0.0",
   "description": "__MSG_pluginDescription__",
   "default_locale": "zh_CN",
-  "permissions": ["storage", "activeTab"],
-  "host_permissions": ["https://chatgpt.com/*"],
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://chatgpt.com/*"
+  ],
   "content_scripts": [
     {
-      "matches": ["https://chatgpt.com/*"],
-      "js": ["content.js"],
-      "css": ["sidebar.css"],
+      "matches": [
+        "https://chatgpt.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "sidebar.css"
+      ],
       "run_at": "document_end"
     }
   ],
