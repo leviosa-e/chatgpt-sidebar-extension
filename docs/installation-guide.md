@@ -1,6 +1,6 @@
 # 安装指南
 
-本文档详细介绍如何安装和配置腾讯元宝侧边栏助手。
+本文档详细介绍如何安装和配置 ChatGPT 侧边栏助手。
 
 ## 📋 系统要求
 
@@ -39,7 +39,7 @@
 
 #### 步骤 4：确认安装
 
-- 插件列表中出现"腾讯元宝侧边栏助手"
+- 插件列表中出现"ChatGPT 侧边栏助手"
 - 浏览器工具栏出现插件图标
 - 状态显示为"已启用"
 
@@ -105,7 +105,7 @@ https://raw.githubusercontent.com/your-repo/yuanbao-sidebar/main/userscript/yuan
 
 ### 步骤 3：验证安装
 
-1. 访问 [腾讯元宝](https://chatgpt.com)
+1. 访问 [ChatGPT](https://chatgpt.com)
 2. 确认页面右侧出现侧边栏
 3. Tampermonkey 图标显示脚本正在运行
 
@@ -118,11 +118,10 @@ https://raw.githubusercontent.com/your-repo/yuanbao-sidebar/main/userscript/yuan
 ```json
 {
   "permissions": [
-    "storage", // 存储历史记录
-    "activeTab" // 访问当前标签页
+    "storage" // 存储历史记录
   ],
   "host_permissions": [
-    "https://chatgpt.com/*" // 访问腾讯元宝网站
+    "https://chatgpt.com/*" // 访问ChatGPT网站
   ]
 }
 ```
@@ -130,8 +129,7 @@ https://raw.githubusercontent.com/your-repo/yuanbao-sidebar/main/userscript/yuan
 #### 权限说明
 
 - **storage**: 用于保存问题历史记录到本地
-- **activeTab**: 用于在腾讯元宝页面注入侧边栏
-- **host_permissions**: 限制插件仅在腾讯元宝网站运行
+- **host_permissions**: 限制插件仅在 ChatGPT 网站运行
 
 ### 油猴脚本权限
 
@@ -153,7 +151,7 @@ https://raw.githubusercontent.com/your-repo/yuanbao-sidebar/main/userscript/yuan
 
 #### ✅ 基础功能
 
-- [ ] 访问腾讯元宝网站时侧边栏自动出现
+- [ ] 访问 ChatGPT 网站时侧边栏自动出现
 - [ ] 侧边栏位于页面右侧，不遮挡主要内容
 - [ ] 点击切换按钮可以展开/收起侧边栏
 
@@ -203,18 +201,18 @@ https://raw.githubusercontent.com/your-repo/yuanbao-sidebar/main/userscript/yuan
 
 #### 问题：权限被拒绝
 
-**症状**: 插件无法在腾讯元宝网站运行
+**症状**: 插件无法在 ChatGPT 网站运行
 **解决方案**:
 
 1. 检查 `host_permissions` 配置
 2. 在扩展程序详情中确认网站访问权限
-3. 刷新腾讯元宝页面
+3. 刷新 ChatGPT 页面
 
 ### 油猴脚本问题
 
 #### 问题：脚本不执行
 
-**症状**: 访问腾讯元宝时侧边栏不出现
+**症状**: 访问 ChatGPT 时侧边栏不出现
 **解决方案**:
 
 1. 检查脚本是否启用（Tampermonkey 面板中）
@@ -283,4 +281,4 @@ https://raw.githubusercontent.com/your-repo/yuanbao-sidebar/main/userscript/yuan
 
 ---
 
-安装完成后，您就可以开始使用腾讯元宝侧边栏助手了！如有任何问题，请参考 [使用指南](user-guide.md) 或联系技术支持。
+安装完成后，您就可以开始使用 ChatGPT 侧边栏助手了！如有任何问题，请参考 [使用指南](user-guide.md) 或联系技术支持。
