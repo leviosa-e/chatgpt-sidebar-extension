@@ -189,7 +189,7 @@ processCustomQuestion(questionText) {
 
 ```
 cd chrome-extension/ # where the extension stored
-zip -r chrome-extension.zip \*
+zip -r chrome-extension.zip *
 ```
 
 ## 🐛 故障排除
