@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         腾讯元宝侧边栏助手
 // @namespace    https://github.com/yuanbao-sidebar
-// @version      1.0.0
+// @version      1.0.1
 // @description  为腾讯元宝对话界面添加侧边栏，显示历史问题记录
 // @author       YuanbaoSidebar Team
 // @match        https://chatgpt.com/*
@@ -940,7 +940,7 @@
       }
 
       const data = {
-        version: "1.0.0",
+        version: "1.0.1",
         exportTime: new Date().toISOString(),
         questions: this.questions,
       };
