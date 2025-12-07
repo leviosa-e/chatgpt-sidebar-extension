@@ -113,6 +113,11 @@ class ChatGPTSidebar {
     this.initDOMObserver();
     this.startObserving();
 
+    window.addEventListener("resize", () => {
+      const mainContainer = this.findMainContainer();
+      this.updateLayoutSpacing(mainContainer);
+    });
+
     console.log("侧边栏已成功创建和初始化");
   }
 
@@ -225,25 +230,22 @@ class ChatGPTSidebar {
    * 插入侧边栏到主容器
    */
   insertSidebar(mainContainer) {
-    // 确保主容器使用flex布局
-    const computedStyle = window.getComputedStyle(mainContainer);
-    if (computedStyle.display !== "flex") {
-      mainContainer.style.display = "flex";
+    document.body.appendChild(this.sidebar);
+    this.updateLayoutSpacing(mainContainer);
+  }
+
+  updateLayoutSpacing(mainContainer) {
+    if (!mainContainer) return;
+    const isMobile = window.innerWidth <= 768;
+    if (this.isCollapsed || isMobile) {
+      mainContainer.style.marginRight = "";
+      document.documentElement.classList.remove("ybq-sidebar-open");
+      return;
     }
-
-    // 插入侧边栏
-    mainContainer.appendChild(this.sidebar);
-
-    // 调整主容器的其他子元素
-    const otherChildren = Array.from(mainContainer.children).filter(
-      (child) => child !== this.sidebar
-    );
-
-    otherChildren.forEach((child) => {
-      if (!child.style.flex) {
-        child.style.flex = "1";
-      }
-    });
+    const width =
+      parseInt(window.getComputedStyle(this.sidebar).width, 10) || 320;
+    mainContainer.style.marginRight = width + "px";
+    document.documentElement.classList.add("ybq-sidebar-open");
   }
 
   /**
@@ -361,6 +363,9 @@ class ChatGPTSidebar {
     if (toggleIcon) {
       toggleIcon.textContent = this.isCollapsed ? "▶" : "◀";
     }
+
+    const mainContainer = this.findMainContainer();
+    this.updateLayoutSpacing(mainContainer);
 
     // 保存状态
     chrome.storage.local.set({ sidebar_collapsed: this.isCollapsed });
@@ -913,6 +918,8 @@ class ChatGPTSidebar {
         if (starFilterCheckbox) {
           starFilterCheckbox.checked = showOnlyStarred;
         }
+        const mainContainer = this.findMainContainer();
+        this.updateLayoutSpacing(mainContainer);
       }
     } catch (err) {
       console.warn("加载侧边栏设置失败:", err);
@@ -981,6 +988,8 @@ class ChatGPTSidebar {
 
       if (newWidth >= 250 && newWidth <= 800) {
         this.sidebar.style.width = newWidth + "px";
+        const mainContainer = this.findMainContainer();
+        this.updateLayoutSpacing(mainContainer);
       }
     };
 

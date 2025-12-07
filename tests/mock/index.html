@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>ChatGPT Mock</title>
+    <link rel="stylesheet" href="../../chrome-extension/sidebar.css" />
+    <style>
+      body {
+        margin: 0;
+      }
+      header {
+        height: 60px;
+        background: #f7f7f7;
+        border-bottom: 1px solid #e5e5e5;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 0 16px;
+      }
+      #conversation-header-actions {
+        display: flex;
+        align-items: center;
+      }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+      .chat-container {
+        width: 100%;
+      }
+      .message {
+        padding: 12px;
+        border: 1px solid #e5e5e5;
+        margin-bottom: 8px;
+        border-radius: 8px;
+      }
+    </style>
+    <script>
+      window.chrome = window.chrome || {};
+      const store = {};
+      window.chrome.storage = {
+        local: {
+          get(keys) {
+            return new Promise((resolve) => {
+              if (!keys) return resolve(store);
+              const result = {};
+              (Array.isArray(keys) ? keys : [keys]).forEach((k) => {
+                result[k] = store[k];
+              });
+              resolve(result);
+            });
+          },
+          set(obj) {
+            Object.assign(store, obj);
+            return Promise.resolve();
+          },
+        },
+      };
+      const messages = {
+        sidebarTitle: "对话目录",
+        filterStarred: "只看星标",
+        emptyStateHeader: "暂无问题记录",
+        emptyStateDescription: "发送消息后会自动记录问题",
+        toggleButton: "目录",
+        emptyStateStarredHeader: "暂无星标问题",
+        emptyStateStarredDescription: "为重要问题添加星标以便筛选",
+        removeStarTitle: "取消星标",
+        addStarTitle: "添加星标",
+        scrollToConversationTitle: "定位到对话",
+      };
+      window.chrome.i18n = {
+        getMessage(key) {
+          return messages[key] || key;
+        },
+      };
+    </script>
+  </head>
+  <body>
+    <header>
+      <div id="conversation-header-actions"></div>
+    </header>
+    <main>
+      <div class="chat-container">
+        <div
+          class="message"
+          data-message-author-role="user"
+          data-message-id="u1"
+        >
+          <div class="whitespace-pre-wrap">请帮我总结一下这段文字</div>
+        </div>
+        <div
+          class="message"
+          data-message-author-role="user"
+          data-message-id="u2"
+        >
+          <div class="whitespace-pre-wrap">写一个Python快速排序</div>
+        </div>
+      </div>
+    </main>
+    <script src="../../chrome-extension/content.js"></script>
+  </body>
+</html>

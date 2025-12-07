@@ -35,7 +35,9 @@
 
 /* 侧边栏主容器 */
 .yuanbao-sidebar {
-  position: relative;
+  position: fixed;
+  right: 0;
+  top: 0;
   width: 320px;
   min-width: 260px;
   max-width: 800px;
@@ -49,6 +51,7 @@
     "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   transition: width 0.3s ease-in-out, transform 0.3s ease-in-out;
   color: var(--sidebar-text-color);
+  z-index: 1000;
 }
 
 .yuanbao-sidebar.resizing {
@@ -374,11 +377,8 @@
 @media (max-width: 768px) {
   .yuanbao-sidebar {
     width: 100%;
-    position: fixed;
-    top: 0;
     left: 0;
     right: 0;
-    height: 100vh;
     border-left: none;
     border-bottom: 1px solid #e5e7eb;
   }
