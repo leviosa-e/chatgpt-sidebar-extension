@@ -185,6 +185,13 @@ processCustomQuestion(questionText) {
 }
 ```
 
+### 压缩方式
+
+```
+cd chrome-extension/ # where the extension stored
+zip -r chrome-extension.zip \*
+```
+
 ## 🐛 故障排除
 
 ### 常见问题
